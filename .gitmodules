@@ -1,0 +1,3 @@
+[submodule "research_figure/happy-figure"]
+	path = research_figure/happy-figure
+	url = https://github.com/datawhalechina/happy-figure.git
