@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Autoware Lite 裁剪架构图</title>
+<style>
+:root {
+  --bg: #f7f6f3;
+  --ink: #1a1a1a;
+  --muted: #6b6b6b;
+  --line: #ddd8d0;
+  --keep: #1b4332;
+  --keep-bg: #d8f3dc;
+  --trim: #9a9a9a;
+  --trim-bg: #ececec;
+  --card: #fff;
+  --accent: #0d3b66;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: "IBM Plex Sans", "Noto Sans SC", system-ui, sans-serif;
+  background: var(--bg); color: var(--ink); line-height: 1.45;
+}
+header {
+  padding: 28px 32px 18px; border-bottom: 1px solid var(--line); background: var(--card);
+}
+header h1 { margin: 0 0 8px; font-size: 26px; font-weight: 650; letter-spacing: -0.02em; }
+header p { margin: 0; color: var(--muted); max-width: 900px; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 24px 32px 48px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0 28px; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+.stat .v { font-size: 28px; font-weight: 700; }
+.stat .l { color: var(--muted); font-size: 13px; margin-top: 4px; }
+h2 { font-size: 18px; margin: 28px 0 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 16px; font-size: 13px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.pipeline {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; margin: 12px 0 8px;
+}
+.pipe-node {
+  flex: 1 1 110px; min-width: 110px; background: var(--card);
+  border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+  text-align: center;
+}
+.pipe-node .name { font-weight: 650; font-size: 13px; }
+.pipe-node .nums { margin-top: 8px; font-size: 12px; color: var(--muted); }
+.pipe-node .bar {
+  height: 6px; border-radius: 3px; background: var(--trim-bg); margin-top: 8px; overflow: hidden;
+}
+.pipe-node .bar > i { display: block; height: 100%; background: var(--keep); }
+.pipe-arrow { align-self: center; color: var(--muted); font-size: 18px; }
+.batches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.batch { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+.batch h3 { margin: 0 0 4px; font-size: 14px; }
+.batch .n { font-size: 22px; font-weight: 700; }
+.batch .d { font-size: 12px; color: var(--muted); }
+.domain {
+  background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  margin-bottom: 14px; overflow: hidden;
+}
+.domain-h {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 14px; border-bottom: 1px solid var(--line); cursor: pointer;
+  background: #faf9f7;
+}
+.domain-h h3 { margin: 0; font-size: 15px; }
+.domain-h .meta { font-size: 12px; color: var(--muted); }
+.pkgs { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 14px; }
+.pkg {
+  font-size: 11px; font-family: ui-monospace, "IBM Plex Mono", monospace;
+  padding: 3px 7px; border-radius: 4px; border: 1px solid transparent;
+}
+.pkg.keep { background: var(--keep-bg); color: var(--keep); border-color: #b7e4c7; }
+.pkg.trim {
+  background: var(--trim-bg); color: var(--trim); text-decoration: line-through;
+  border-color: #ddd;
+}
+.pkg.trim::after {
+  content: attr(data-batch);
+  margin-left: 4px; font-size: 9px; text-decoration: none;
+  color: #888; font-family: inherit;
+}
+.filter {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px;
+}
+.filter input, .filter select {
+  border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: #fff;
+  font: inherit; font-size: 13px;
+}
+.note {
+  font-size: 12px; color: var(--muted); margin-top: 24px; padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 900px) {
+  .stats, .batches { grid-template-columns: 1fr 1fr; }
+  .pipe-arrow { display: none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Autoware.Universe 裁剪架构图</h1>
+  <p>基线全量架构上标注 AiLabCar Lite 边剪边测结果：灰色删除线 = 已 COLCON_IGNORE；绿色 = 仍在编译闭包。
+  数据源：/autoware_1.7.1 · 2026-09-18 · 机制为 IGNORE（源码仍在磁盘）。</p>
+</header>
+<div class="wrap">
+  <div class="stats">
+    <div class="stat"><div class="v">480</div><div class="l">裁剪前包数（约）</div></div>
+    <div class="stat"><div class="v">292</div><div class="l">当前 colcon list</div></div>
+    <div class="stat"><div class="v">196</div><div class="l">已 IGNORE 包</div></div>
+    <div class="stat"><div class="v">~148M</div><div class="l">install/ 体积</div></div>
+  </div>
+
+  <h2>运行时栈（保留 / 已裁）</h2>
+  <div class="legend">
+    <span><i class="sw" style="background:var(--keep)"></i>保留（仍编译）</span>
+    <span><i class="sw" style="background:var(--trim)"></i>已裁（IGNORE）</span>
+  </div>
+  <div class="pipeline">
+<div class="pipe-node">
+  <div class="name">Sensing</div>
+  <div class="nums"><b style="color:var(--keep)">11</b> 保留 · <span style="color:var(--trim)">8</span> 已裁 / 19</div>
+  <div class="bar"><i style="width:57%"></i></div>
+</div>
+<div class="pipe-arrow">→</div>
+<div class="pipe-node">
+  <div class="name">Perception</div>
+  <div class="nums"><b style="color:var(--keep)">15</b> 保留 · <span style="color:var(--trim)">38</span> 已裁 / 53</div>
+  <div class="bar"><i style="width:28%"></i></div>
+</div>
+<div class="pipe-arrow">→</div>
+<div class="pipe-node">
+  <div class="name">Localization</div>
+  <div class="nums"><b style="color:var(--keep)">13</b> 保留 · <span style="color:var(--trim)">9</span> 已裁 / 22</div>
+  <div class="bar"><i style="width:59%"></i></div>
+</div>
+<div class="pipe-arrow">→</div>
+<div class="pipe-node">
+  <div class="name">Map</div>
+  <div class="nums"><b style="color:var(--keep)">8</b> 保留 · <span style="color:var(--trim)">0</span> 已裁 / 8</div>
+  <div class="bar"><i style="width:100%"></i></div>
+</div>
+<div class="pipe-arrow">→</div>
+<div class="pipe-node">
+  <div class="name">Planning</div>
+  <div class="nums"><b style="color:var(--keep)">43</b> 保留 · <span style="color:var(--trim)">36</span> 已裁 / 79</div>
+  <div class="bar"><i style="width:54%"></i></div>
+</div>
+<div class="pipe-arrow">→</div>
+<div class="pipe-node">
+  <div class="name">Control</div>
+  <div class="nums"><b style="color:var(--keep)">16</b> 保留 · <span style="color:var(--trim)">7</span> 已裁 / 23</div>
+  <div class="bar"><i style="width:69%"></i></div>
+</div>
+<div class="pipe-arrow">→</div>
+<div class="pipe-node">
+  <div class="name">Vehicle</div>
+  <div class="nums"><b style="color:var(--keep)">5</b> 保留 · <span style="color:var(--trim)">0</span> 已裁 / 5</div>
+  <div class="bar"><i style="width:100%"></i></div>
+</div>
+<div class="pipe-arrow">→</div>
+<div class="pipe-node">
+  <div class="name">System</div>
+  <div class="nums"><b style="color:var(--keep)">19</b> 保留 · <span style="color:var(--trim)">7</span> 已裁 / 26</div>
+  <div class="bar"><i style="width:73%"></i></div>
+</div>
+
+  </div>
+
+  <h2>裁剪批次</h2>
+  <div class="batches">
+<div class="batch" style="border-left:3px solid #c45c26">
+  <h3>P1</h3>
+  <div class="n" style="color:#c45c26">39</div>
+  <div class="d">感知白名单（YOLO 保留）</div>
+</div>
+<div class="batch" style="border-left:3px solid #2a6f97">
+  <h3>L1</h3>
+  <div class="n" style="color:#2a6f97">21</div>
+  <div class="d">定位 extras（NDT/YabLoc/eagleye）</div>
+</div>
+<div class="batch" style="border-left:3px solid #52796f">
+  <h3>S1</h3>
+  <div class="n" style="color:#52796f">45</div>
+  <div class="d">传感驱动 / Nebula / 雷达</div>
+</div>
+<div class="batch" style="border-left:3px solid #6d597a">
+  <h3>X1</h3>
+  <div class="n" style="color:#6d597a">18</div>
+  <div class="d">AWSIM/CARLA / evaluator</div>
+</div>
+<div class="batch" style="border-left:3px solid #9b5de5">
+  <h3>Y1</h3>
+  <div class="n" style="color:#9b5de5">15</div>
+  <div class="d">system monitors / 样例</div>
+</div>
+<div class="batch" style="border-left:3px solid #e76f51">
+  <h3>P2</h3>
+  <div class="n" style="color:#e76f51">43</div>
+  <div class="d">赛车规划/控制城市模块</div>
+</div>
+<div class="batch" style="border-left:3px solid #457b9d">
+  <h3>V1</h3>
+  <div class="n" style="color:#457b9d">7</div>
+  <div class="d">叶子（非 RViz）</div>
+</div>
+<div class="batch" style="border-left:3px solid #6c757d">
+  <h3>pre</h3>
+  <div class="n" style="color:#6c757d">8</div>
+  <div class="d">编译坏包 / 历史 IGNORE</div>
+</div>
+
+  </div>
+
+  <h2>按功能域：包清单（灰=已裁）</h2>
+  <div class="filter">
+    <input id="q" type="search" placeholder="过滤包名…" style="min-width:220px"/>
+    <select id="mode">
+      <option value="all">全部</option>
+      <option value="kept">仅保留</option>
+      <option value="trim">仅已裁</option>
+    </select>
+  </div>
+<div class="domain" data-domain="sensing">
+  <div class="domain-h" onclick="this.parentElement.classList.toggle('open')">
+    <h3>Sensing</h3>
+    <div class="meta">保留 11 · 已裁 8 · 共 19</div>
+  </div>
+  <div class="pkgs">
+<span class="pkg keep" data-name="autoware_core_sensing">autoware_core_sensing</span>
+<span class="pkg keep" data-name="autoware_crop_box_filter">autoware_crop_box_filter</span>
+<span class="pkg keep" data-name="autoware_cuda_pointcloud_preprocessor">autoware_cuda_pointcloud_preprocessor</span>
+<span class="pkg keep" data-name="autoware_cuda_utils">autoware_cuda_utils</span>
+<span class="pkg keep" data-name="autoware_downsample_filters">autoware_downsample_filters</span>
+<span class="pkg keep" data-name="autoware_gnss_poser">autoware_gnss_poser</span>
+<span class="pkg keep" data-name="autoware_image_transport_decompressor">autoware_image_transport_decompressor</span>
+<span class="pkg keep" data-name="autoware_imu_corrector">autoware_imu_corrector</span>
+<span class="pkg keep" data-name="autoware_pcl_extensions">autoware_pcl_extensions</span>
+<span class="pkg keep" data-name="autoware_pointcloud_preprocessor">autoware_pointcloud_preprocessor</span>
+<span class="pkg keep" data-name="autoware_vehicle_velocity_converter">autoware_vehicle_velocity_converter</span>
+<span class="pkg trim" data-name="autoware_calibration_status_classifier" data-batch="S1">autoware_calibration_status_classifier</span>
+<span class="pkg trim" data-name="autoware_image_diagnostics" data-batch="S1">autoware_image_diagnostics</span>
+<span class="pkg trim" data-name="autoware_livox_tag_filter" data-batch="S1">autoware_livox_tag_filter</span>
+<span class="pkg trim" data-name="autoware_radar_objects_adapter" data-batch="S1">autoware_radar_objects_adapter</span>
+<span class="pkg trim" data-name="autoware_radar_scan_to_pointcloud2" data-batch="S1">autoware_radar_scan_to_pointcloud2</span>
+<span class="pkg trim" data-name="autoware_radar_static_pointcloud_filter" data-batch="S1">autoware_radar_static_pointcloud_filter</span>
+<span class="pkg trim" data-name="autoware_radar_threshold_filter" data-batch="S1">autoware_radar_threshold_filter</span>
+<span class="pkg trim" data-name="autoware_radar_tracks_noise_filter" data-batch="S1">autoware_radar_tracks_noise_filter</span>
+</div></div>
+<div class="domain" data-domain="perception">
+  <div class="domain-h" onclick="this.parentElement.classList.toggle('open')">
+    <h3>Perception</h3>
+    <div class="meta">保留 15 · 已裁 38 · 共 53</div>
+  </div>
+  <div class="pkgs">
+<span class="pkg keep" data-name="autoware_bytetrack">autoware_bytetrack</span>
+<span class="pkg keep" data-name="autoware_core_perception">autoware_core_perception</span>
+<span class="pkg keep" data-name="autoware_detected_object_feature_remover">autoware_detected_object_feature_remover</span>
+<span class="pkg keep" data-name="autoware_ground_filter">autoware_ground_filter</span>
+<span class="pkg keep" data-name="autoware_map_based_prediction">autoware_map_based_prediction</span>
+<span class="pkg keep" data-name="autoware_multi_object_tracker">autoware_multi_object_tracker</span>
+<span class="pkg keep" data-name="autoware_perception_objects_converter">autoware_perception_objects_converter</span>
+<span class="pkg keep" data-name="autoware_predicted_path_postprocessor">autoware_predicted_path_postprocessor</span>
+<span class="pkg keep" data-name="autoware_probabilistic_occupancy_grid_map">autoware_probabilistic_occupancy_grid_map</span>
+<span class="pkg keep" data-name="autoware_ptv3">autoware_ptv3</span>
+<span class="pkg keep" data-name="autoware_shape_estimation">autoware_shape_estimation</span>
+<span class="pkg keep" data-name="autoware_tensorrt_common">autoware_tensorrt_common</span>
+<span class="pkg keep" data-name="autoware_tensorrt_plugins">autoware_tensorrt_plugins</span>
+<span class="pkg keep" data-name="autoware_tensorrt_yolox">autoware_tensorrt_yolox</span>
+<span class="pkg keep" data-name="perception_utils">perception_utils</span>
+<span class="pkg trim" data-name="autoware_cluster_merger" data-batch="P1">autoware_cluster_merger</span>
+<span class="pkg trim" data-name="autoware_compare_map_segmentation" data-batch="P1">autoware_compare_map_segmentation</span>
+<span class="pkg trim" data-name="autoware_crosswalk_traffic_light_estimator" data-batch="P1">autoware_crosswalk_traffic_light_estimator</span>
+<span class="pkg trim" data-name="autoware_detected_object_validation" data-batch="P1">autoware_detected_object_validation</span>
+<span class="pkg trim" data-name="autoware_detection_by_tracker" data-batch="P1">autoware_detection_by_tracker</span>
+<span class="pkg trim" data-name="autoware_elevation_map_loader" data-batch="P1">autoware_elevation_map_loader</span>
+<span class="pkg trim" data-name="autoware_euclidean_cluster" data-batch="P1">autoware_euclidean_cluster</span>
+<span class="pkg trim" data-name="autoware_euclidean_cluster_object_detector" data-batch="P2">autoware_euclidean_cluster_object_detector</span>
+<span class="pkg trim" data-name="autoware_ground_segmentation" data-batch="P1">autoware_ground_segmentation</span>
+<span class="pkg trim" data-name="autoware_ground_segmentation_cuda" data-batch="P1">autoware_ground_segmentation_cuda</span>
+<span class="pkg trim" data-name="autoware_image_object_locator" data-batch="P1">autoware_image_object_locator</span>
+<span class="pkg trim" data-name="autoware_image_projection_based_fusion" data-batch="P1">autoware_image_projection_based_fusion</span>
+<span class="pkg trim" data-name="autoware_lidar_apollo_instance_segmentation" data-batch="P1">autoware_lidar_apollo_instance_segmentation</span>
+<span class="pkg trim" data-name="autoware_lidar_centerpoint" data-batch="P1">autoware_lidar_centerpoint</span>
+<span class="pkg trim" data-name="autoware_lidar_transfusion" data-batch="P1">autoware_lidar_transfusion</span>
+<span class="pkg trim" data-name="autoware_object_merger" data-batch="P1">autoware_object_merger</span>
+<span class="pkg trim" data-name="autoware_object_range_splitter" data-batch="P1">autoware_object_range_splitter</span>
+<span class="pkg trim" data-name="autoware_object_sorter" data-batch="P1">autoware_object_sorter</span>
+<span class="pkg trim" data-name="autoware_object_velocity_splitter" data-batch="P1">autoware_object_velocity_splitter</span>
+<span class="pkg trim" data-name="autoware_occupancy_grid_map_outlier_filter" data-batch="P1">autoware_occupancy_grid_map_outlier_filter</span>
+<span class="pkg trim" data-name="autoware_radar_fusion_to_detected_object" data-batch="P1">autoware_radar_fusion_to_detected_object</span>
+<span class="pkg trim" data-name="autoware_radar_object_tracker" data-batch="P1">autoware_radar_object_tracker</span>
+<span class="pkg trim" data-name="autoware_radar_tracks_msgs_converter" data-batch="S1">autoware_radar_tracks_msgs_converter</span>
+<span class="pkg trim" data-name="autoware_raindrop_cluster_filter" data-batch="P1">autoware_raindrop_cluster_filter</span>
+<span class="pkg trim" data-name="autoware_simpl_prediction" data-batch="P1">autoware_simpl_prediction</span>
+<span class="pkg trim" data-name="autoware_simple_object_merger" data-batch="P1">autoware_simple_object_merger</span>
+<span class="pkg trim" data-name="autoware_tensorrt_bevdet" data-batch="P1">autoware_tensorrt_bevdet</span>
+<span class="pkg trim" data-name="autoware_tensorrt_classifier" data-batch="P1">autoware_tensorrt_classifier</span>
+<span class="pkg trim" data-name="autoware_tracking_object_merger" data-batch="P1">autoware_tracking_object_merger</span>
+<span class="pkg trim" data-name="autoware_traffic_light_arbiter" data-batch="P1">autoware_traffic_light_arbiter</span>
+<span class="pkg trim" data-name="autoware_traffic_light_category_merger" data-batch="P1">autoware_traffic_light_category_merger</span>
+<span class="pkg trim" data-name="autoware_traffic_light_classifier" data-batch="P1">autoware_traffic_light_classifier</span>
+<span class="pkg trim" data-name="autoware_traffic_light_fine_detector" data-batch="P1">autoware_traffic_light_fine_detector</span>
+<span class="pkg trim" data-name="autoware_traffic_light_map_based_detector" data-batch="P1">autoware_traffic_light_map_based_detector</span>
+<span class="pkg trim" data-name="autoware_traffic_light_multi_camera_fusion" data-batch="P1">autoware_traffic_light_multi_camera_fusion</span>
+<span class="pkg trim" data-name="autoware_traffic_light_occlusion_predictor" data-batch="P1">autoware_traffic_light_occlusion_predictor</span>
+<span class="pkg trim" data-name="autoware_traffic_light_selector" data-batch="P1">autoware_traffic_light_selector</span>
+<span class="pkg trim" data-name="autoware_traffic_light_visualization" data-batch="P1">autoware_traffic_light_visualization</span>
+</div></div>
+<div class="domain" data-domain="localization">
+  <div class="domain-h" onclick="this.parentElement.classList.toggle('open')">
+    <h3>Localization</h3>
+    <div class="meta">保留 13 · 已裁 9 · 共 22</div>
+  </div>
+  <div class="pkgs">
+<span class="pkg keep" data-name="autoware_core_localization">autoware_core_localization</span>
+<span class="pkg keep" data-name="autoware_ekf_localizer">autoware_ekf_localizer</span>
+<span class="pkg keep" data-name="autoware_geo_pose_projector">autoware_geo_pose_projector</span>
+<span class="pkg keep" data-name="autoware_gyro_odometer">autoware_gyro_odometer</span>
+<span class="pkg keep" data-name="autoware_localization_error_monitor">autoware_localization_error_monitor</span>
+<span class="pkg keep" data-name="autoware_localization_util">autoware_localization_util</span>
+<span class="pkg keep" data-name="autoware_pose2twist">autoware_pose2twist</span>
+<span class="pkg keep" data-name="autoware_pose_covariance_modifier">autoware_pose_covariance_modifier</span>
+<span class="pkg keep" data-name="autoware_pose_estimator_arbiter">autoware_pose_estimator_arbiter</span>
+<span class="pkg keep" data-name="autoware_pose_initializer">autoware_pose_initializer</span>
+<span class="pkg keep" data-name="autoware_pose_instability_detector">autoware_pose_instability_detector</span>
+<span class="pkg keep" data-name="autoware_stop_filter">autoware_stop_filter</span>
+<span class="pkg keep" data-name="autoware_twist2accel">autoware_twist2accel</span>
+<span class="pkg trim" data-name="autoware_ar_tag_based_localizer" data-batch="L1">autoware_ar_tag_based_localizer</span>
+<span class="pkg trim" data-name="autoware_landmark_manager" data-batch="L1">autoware_landmark_manager</span>
+<span class="pkg trim" data-name="autoware_lidar_marker_localizer" data-batch="L1">autoware_lidar_marker_localizer</span>
+<span class="pkg trim" data-name="autoware_ndt_scan_matcher" data-batch="L1">autoware_ndt_scan_matcher</span>
+<span class="pkg trim" data-name="yabloc_common" data-batch="L1">yabloc_common</span>
+<span class="pkg trim" data-name="yabloc_image_processing" data-batch="L1">yabloc_image_processing</span>
+<span class="pkg trim" data-name="yabloc_monitor" data-batch="L1">yabloc_monitor</span>
+<span class="pkg trim" data-name="yabloc_particle_filter" data-batch="L1">yabloc_particle_filter</span>
+<span class="pkg trim" data-name="yabloc_pose_initializer" data-batch="L1">yabloc_pose_initializer</span>
+</div></div>
+<div class="domain" data-domain="map">
+  <div class="domain-h" onclick="this.parentElement.classList.toggle('open')">
+    <h3>Map</h3>
+    <div class="meta">保留 8 · 已裁 0 · 共 8</div>
+  </div>
+  <div class="pkgs">
+<span class="pkg keep" data-name="autoware_core_map">autoware_core_map</span>
+<span class="pkg keep" data-name="autoware_lanelet2_extension">autoware_lanelet2_extension</span>
+<span class="pkg keep" data-name="autoware_lanelet2_extension_python">autoware_lanelet2_extension_python</span>
+<span class="pkg keep" data-name="autoware_lanelet2_map_visualizer">autoware_lanelet2_map_visualizer</span>
+<span class="pkg keep" data-name="autoware_map_height_fitter">autoware_map_height_fitter</span>
+<span class="pkg keep" data-name="autoware_map_loader">autoware_map_loader</span>
+<span class="pkg keep" data-name="autoware_map_projection_loader">autoware_map_projection_loader</span>
+<span class="pkg keep" data-name="autoware_map_tf_generator">autoware_map_tf_generator</span>
+</div></div>
+<div class="domain" data-domain="planning">
+  <div class="domain-h" onclick="this.parentElement.classList.toggle('open')">
+    <h3>Planning</h3>
+    <div class="meta">保留 43 · 已裁 36 · 共 79</div>
+  </div>
+  <div class="pkgs">
+<span class="pkg keep" data-name="autoware_behavior_path_goal_planner_module">autoware_behavior_path_goal_planner_module</span>
+<span class="pkg keep" data-name="autoware_behavior_path_planner">autoware_behavior_path_planner</span>
+<span class="pkg keep" data-name="autoware_behavior_path_planner_common">autoware_behavior_path_planner_common</span>
+<span class="pkg keep" data-name="autoware_behavior_path_start_planner_module">autoware_behavior_path_start_planner_module</span>
+<span class="pkg keep" data-name="autoware_behavior_path_static_obstacle_avoidance_module">autoware_behavior_path_static_obstacle_avoidance_module</span>
+<span class="pkg keep" data-name="autoware_behavior_velocity_planner">autoware_behavior_velocity_planner</span>
+<span class="pkg keep" data-name="autoware_behavior_velocity_planner_common">autoware_behavior_velocity_planner_common</span>
+<span class="pkg keep" data-name="autoware_bezier_sampler">autoware_bezier_sampler</span>
+<span class="pkg keep" data-name="autoware_core_planning">autoware_core_planning</span>
+<span class="pkg keep" data-name="autoware_external_velocity_limit_selector">autoware_external_velocity_limit_selector</span>
+<span class="pkg keep" data-name="autoware_freespace_planning_algorithms">autoware_freespace_planning_algorithms</span>
+<span class="pkg keep" data-name="autoware_frenet_planner">autoware_frenet_planner</span>
+<span class="pkg keep" data-name="autoware_hazard_lights_selector">autoware_hazard_lights_selector</span>
+<span class="pkg keep" data-name="autoware_mission_planner">autoware_mission_planner</span>
+<span class="pkg keep" data-name="autoware_mission_planner_universe">autoware_mission_planner_universe</span>
+<span class="pkg keep" data-name="autoware_motion_velocity_obstacle_cruise_module">autoware_motion_velocity_obstacle_cruise_module</span>
+<span class="pkg keep" data-name="autoware_motion_velocity_obstacle_slow_down_module">autoware_motion_velocity_obstacle_slow_down_module</span>
+<span class="pkg keep" data-name="autoware_motion_velocity_obstacle_stop_module">autoware_motion_velocity_obstacle_stop_module</span>
+<span class="pkg keep" data-name="autoware_motion_velocity_planner">autoware_motion_velocity_planner</span>
+<span class="pkg keep" data-name="autoware_motion_velocity_planner_common">autoware_motion_velocity_planner_common</span>
+<span class="pkg keep" data-name="autoware_objects_of_interest_marker_interface">autoware_objects_of_interest_marker_interface</span>
+<span class="pkg keep" data-name="autoware_path_generator">autoware_path_generator</span>
+<span class="pkg keep" data-name="autoware_path_optimizer">autoware_path_optimizer</span>
+<span class="pkg keep" data-name="autoware_path_sampler">autoware_path_sampler</span>
+<span class="pkg keep" data-name="autoware_path_smoother">autoware_path_smoother</span>
+<span class="pkg keep" data-name="autoware_planning_factor_interface">autoware_planning_factor_interface</span>
+<span class="pkg keep" data-name="autoware_planning_topic_converter">autoware_planning_topic_converter</span>
+<span class="pkg keep" data-name="autoware_planning_validator">autoware_planning_validator</span>
+<span class="pkg keep" data-name="autoware_planning_validator_latency_checker">autoware_planning_validator_latency_checker</span>
+<span class="pkg keep" data-name="autoware_planning_validator_test_utils">autoware_planning_validator_test_utils</span>
+<span class="pkg keep" data-name="autoware_planning_validator_trajectory_checker">autoware_planning_validator_trajectory_checker</span>
+<span class="pkg keep" data-name="autoware_route_handler">autoware_route_handler</span>
+<span class="pkg keep" data-name="autoware_rtc_interface">autoware_rtc_interface</span>
+<span class="pkg keep" data-name="autoware_sampler_common">autoware_sampler_common</span>
+<span class="pkg keep" data-name="autoware_scenario_selector">autoware_scenario_selector</span>
+<span class="pkg keep" data-name="autoware_trajectory_adapter">autoware_trajectory_adapter</span>
+<span class="pkg keep" data-name="autoware_trajectory_concatenator">autoware_trajectory_concatenator</span>
+<span class="pkg keep" data-name="autoware_trajectory_modifier">autoware_trajectory_modifier</span>
+<span class="pkg keep" data-name="autoware_trajectory_optimizer">autoware_trajectory_optimizer</span>
+<span class="pkg keep" data-name="autoware_trajectory_ranker">autoware_trajectory_ranker</span>
+<span class="pkg keep" data-name="autoware_trajectory_safety_filter">autoware_trajectory_safety_filter</span>
+<span class="pkg keep" data-name="autoware_trajectory_traffic_rule_filter">autoware_trajectory_traffic_rule_filter</span>
+<span class="pkg keep" data-name="autoware_velocity_smoother">autoware_velocity_smoother</span>
+<span class="pkg trim" data-name="autoware_behavior_path_avoidance_by_lane_change_module" data-batch="P2">autoware_behavior_path_avoidance_by_lane_change_module</span>
+<span class="pkg trim" data-name="autoware_behavior_path_bidirectional_traffic_module" data-batch="P2">autoware_behavior_path_bidirectional_traffic_module</span>
+<span class="pkg trim" data-name="autoware_behavior_path_dynamic_obstacle_avoidance_module" data-batch="P2">autoware_behavior_path_dynamic_obstacle_avoidance_module</span>
+<span class="pkg trim" data-name="autoware_behavior_path_external_request_lane_change_module" data-batch="P2">autoware_behavior_path_external_request_lane_change_module</span>
+<span class="pkg trim" data-name="autoware_behavior_path_lane_change_module" data-batch="P2">autoware_behavior_path_lane_change_module</span>
+<span class="pkg trim" data-name="autoware_behavior_path_sampling_planner_module" data-batch="P2">autoware_behavior_path_sampling_planner_module</span>
+<span class="pkg trim" data-name="autoware_behavior_path_side_shift_module" data-batch="P2">autoware_behavior_path_side_shift_module</span>
+<span class="pkg trim" data-name="autoware_behavior_velocity_blind_spot_module" data-batch="P2">autoware_behavior_velocity_blind_spot_module</span>
+<span class="pkg trim" data-name="autoware_behavior_velocity_crosswalk_module" data-batch="P2">autoware_behavior_velocity_crosswalk_module</span>
+<span class="pkg trim" data-name="autoware_behavior_velocity_detection_area_module" data-batch="P2">autoware_behavior_velocity_detection_area_module</span>
+<span class="pkg trim" data-name="autoware_behavior_velocity_intersection_module" data-batch="P2">autoware_behavior_velocity_intersection_module</span>
+<span class="pkg trim" data-name="autoware_behavior_velocity_no_drivable_lane_module" data-batch="P2">autoware_behavior_velocity_no_drivable_lane_module</span>
+<span class="pkg trim" data-name="autoware_behavior_velocity_no_stopping_area_module" data-batch="P2">autoware_behavior_velocity_no_stopping_area_module</span>
+<span class="pkg trim" data-name="autoware_behavior_velocity_occlusion_spot_module" data-batch="P2">autoware_behavior_velocity_occlusion_spot_module</span>
+<span class="pkg trim" data-name="autoware_behavior_velocity_roundabout_module" data-batch="P2">autoware_behavior_velocity_roundabout_module</span>
+<span class="pkg trim" data-name="autoware_behavior_velocity_rtc_interface" data-batch="V1">autoware_behavior_velocity_rtc_interface</span>
+<span class="pkg trim" data-name="autoware_behavior_velocity_speed_bump_module" data-batch="P2">autoware_behavior_velocity_speed_bump_module</span>
+<span class="pkg trim" data-name="autoware_behavior_velocity_stop_line_module" data-batch="P2">autoware_behavior_velocity_stop_line_module</span>
+<span class="pkg trim" data-name="autoware_behavior_velocity_template_module" data-batch="P2">autoware_behavior_velocity_template_module</span>
+<span class="pkg trim" data-name="autoware_behavior_velocity_traffic_light_module" data-batch="P2">autoware_behavior_velocity_traffic_light_module</span>
+<span class="pkg trim" data-name="autoware_behavior_velocity_virtual_traffic_light_module" data-batch="P2">autoware_behavior_velocity_virtual_traffic_light_module</span>
+<span class="pkg trim" data-name="autoware_behavior_velocity_walkway_module" data-batch="P2">autoware_behavior_velocity_walkway_module</span>
+<span class="pkg trim" data-name="autoware_costmap_generator" data-batch="P2">autoware_costmap_generator</span>
+<span class="pkg trim" data-name="autoware_diffusion_planner" data-batch="P2">autoware_diffusion_planner</span>
+<span class="pkg trim" data-name="autoware_freespace_planner" data-batch="P2">autoware_freespace_planner</span>
+<span class="pkg trim" data-name="autoware_manual_lane_change_handler" data-batch="V1">autoware_manual_lane_change_handler</span>
+<span class="pkg trim" data-name="autoware_motion_velocity_boundary_departure_prevention_module" data-batch="P2">autoware_motion_velocity_boundary_departure_prevention_module</span>
+<span class="pkg trim" data-name="autoware_motion_velocity_dynamic_obstacle_stop_module" data-batch="P2">autoware_motion_velocity_dynamic_obstacle_stop_module</span>
+<span class="pkg trim" data-name="autoware_motion_velocity_obstacle_velocity_limiter_module" data-batch="P2">autoware_motion_velocity_obstacle_velocity_limiter_module</span>
+<span class="pkg trim" data-name="autoware_motion_velocity_out_of_lane_module" data-batch="P2">autoware_motion_velocity_out_of_lane_module</span>
+<span class="pkg trim" data-name="autoware_motion_velocity_road_user_stop_module" data-batch="P2">autoware_motion_velocity_road_user_stop_module</span>
+<span class="pkg trim" data-name="autoware_motion_velocity_run_out_module" data-batch="P2">autoware_motion_velocity_run_out_module</span>
+<span class="pkg trim" data-name="autoware_planning_validator_intersection_collision_checker" data-batch="P2">autoware_planning_validator_intersection_collision_checker</span>
+<span class="pkg trim" data-name="autoware_planning_validator_rear_collision_checker" data-batch="P2">autoware_planning_validator_rear_collision_checker</span>
+<span class="pkg trim" data-name="autoware_remaining_distance_time_calculator" data-batch="P2">autoware_remaining_distance_time_calculator</span>
+<span class="pkg trim" data-name="autoware_surround_obstacle_checker" data-batch="P2">autoware_surround_obstacle_checker</span>
+</div></div>
+<div class="domain" data-domain="control">
+  <div class="domain-h" onclick="this.parentElement.classList.toggle('open')">
+    <h3>Control</h3>
+    <div class="meta">保留 16 · 已裁 7 · 共 23</div>
+  </div>
+  <div class="pkgs">
+<span class="pkg keep" data-name="autoware_collision_detector">autoware_collision_detector</span>
+<span class="pkg keep" data-name="autoware_control_command_gate">autoware_control_command_gate</span>
+<span class="pkg keep" data-name="autoware_control_validator">autoware_control_validator</span>
+<span class="pkg keep" data-name="autoware_core_control">autoware_core_control</span>
+<span class="pkg keep" data-name="autoware_external_cmd_selector">autoware_external_cmd_selector</span>
+<span class="pkg keep" data-name="autoware_lane_departure_checker">autoware_lane_departure_checker</span>
+<span class="pkg keep" data-name="autoware_mpc_lateral_controller">autoware_mpc_lateral_controller</span>
+<span class="pkg keep" data-name="autoware_operation_mode_transition_manager">autoware_operation_mode_transition_manager</span>
+<span class="pkg keep" data-name="autoware_pid_longitudinal_controller">autoware_pid_longitudinal_controller</span>
+<span class="pkg keep" data-name="autoware_predicted_path_checker">autoware_predicted_path_checker</span>
+<span class="pkg keep" data-name="autoware_pure_pursuit">autoware_pure_pursuit</span>
+<span class="pkg keep" data-name="autoware_shift_decider">autoware_shift_decider</span>
+<span class="pkg keep" data-name="autoware_stop_mode_operator">autoware_stop_mode_operator</span>
+<span class="pkg keep" data-name="autoware_trajectory_follower_base">autoware_trajectory_follower_base</span>
+<span class="pkg keep" data-name="autoware_trajectory_follower_node">autoware_trajectory_follower_node</span>
+<span class="pkg keep" data-name="autoware_vehicle_cmd_gate">autoware_vehicle_cmd_gate</span>
+<span class="pkg trim" data-name="autoware_autonomous_emergency_braking" data-batch="P2">autoware_autonomous_emergency_braking</span>
+<span class="pkg trim" data-name="autoware_control_performance_analysis" data-batch="P2">autoware_control_performance_analysis</span>
+<span class="pkg trim" data-name="autoware_joy_controller" data-batch="P2">autoware_joy_controller</span>
+<span class="pkg trim" data-name="autoware_obstacle_collision_checker" data-batch="P2">autoware_obstacle_collision_checker</span>
+<span class="pkg trim" data-name="autoware_simple_pure_pursuit" data-batch="P2">autoware_simple_pure_pursuit</span>
+<span class="pkg trim" data-name="autoware_smart_mpc_trajectory_follower" data-batch="P2">autoware_smart_mpc_trajectory_follower</span>
+<span class="pkg trim" data-name="autoware_spheric_collision_detector" data-batch="P2">autoware_spheric_collision_detector</span>
+</div></div>
+<div class="domain" data-domain="vehicle">
+  <div class="domain-h" onclick="this.parentElement.classList.toggle('open')">
+    <h3>Vehicle</h3>
+    <div class="meta">保留 5 · 已裁 0 · 共 5</div>
+  </div>
+  <div class="pkgs">
+<span class="pkg keep" data-name="autoware_accel_brake_map_calibrator">autoware_accel_brake_map_calibrator</span>
+<span class="pkg keep" data-name="autoware_core_vehicle">autoware_core_vehicle</span>
+<span class="pkg keep" data-name="autoware_external_cmd_converter">autoware_external_cmd_converter</span>
+<span class="pkg keep" data-name="autoware_raw_vehicle_cmd_converter">autoware_raw_vehicle_cmd_converter</span>
+<span class="pkg keep" data-name="autoware_steer_offset_estimator">autoware_steer_offset_estimator</span>
+</div></div>
+<div class="domain" data-domain="system">
+  <div class="domain-h" onclick="this.parentElement.classList.toggle('open')">
+    <h3>System</h3>
+    <div class="meta">保留 19 · 已裁 7 · 共 26</div>
+  </div>
+  <div class="pkgs">
+<span class="pkg keep" data-name="autoware_adapi_visualizers">autoware_adapi_visualizers</span>
+<span class="pkg keep" data-name="autoware_automatic_pose_initializer">autoware_automatic_pose_initializer</span>
+<span class="pkg keep" data-name="autoware_command_mode_decider">autoware_command_mode_decider</span>
+<span class="pkg keep" data-name="autoware_command_mode_decider_plugins">autoware_command_mode_decider_plugins</span>
+<span class="pkg keep" data-name="autoware_command_mode_switcher">autoware_command_mode_switcher</span>
+<span class="pkg keep" data-name="autoware_command_mode_switcher_plugins">autoware_command_mode_switcher_plugins</span>
+<span class="pkg keep" data-name="autoware_command_mode_types">autoware_command_mode_types</span>
+<span class="pkg keep" data-name="autoware_component_state_monitor">autoware_component_state_monitor</span>
+<span class="pkg keep" data-name="autoware_default_adapi_universe">autoware_default_adapi_universe</span>
+<span class="pkg keep" data-name="autoware_diagnostic_graph_aggregator">autoware_diagnostic_graph_aggregator</span>
+<span class="pkg keep" data-name="autoware_diagnostic_graph_utils">autoware_diagnostic_graph_utils</span>
+<span class="pkg keep" data-name="autoware_dummy_diag_publisher">autoware_dummy_diag_publisher</span>
+<span class="pkg keep" data-name="autoware_duplicated_node_checker">autoware_duplicated_node_checker</span>
+<span class="pkg keep" data-name="autoware_hazard_status_converter">autoware_hazard_status_converter</span>
+<span class="pkg keep" data-name="autoware_mrm_comfortable_stop_operator">autoware_mrm_comfortable_stop_operator</span>
+<span class="pkg keep" data-name="autoware_mrm_emergency_stop_operator">autoware_mrm_emergency_stop_operator</span>
+<span class="pkg keep" data-name="autoware_mrm_handler">autoware_mrm_handler</span>
+<span class="pkg keep" data-name="autoware_system_monitor">autoware_system_monitor</span>
+<span class="pkg keep" data-name="autoware_topic_state_monitor">autoware_topic_state_monitor</span>
+<span class="pkg trim" data-name="autoware_bluetooth_monitor" data-batch="Y1">autoware_bluetooth_monitor</span>
+<span class="pkg trim" data-name="autoware_component_monitor" data-batch="Y1">autoware_component_monitor</span>
+<span class="pkg trim" data-name="autoware_dummy_infrastructure" data-batch="P2">autoware_dummy_infrastructure</span>
+<span class="pkg trim" data-name="autoware_pipeline_latency_monitor" data-batch="Y1">autoware_pipeline_latency_monitor</span>
+<span class="pkg trim" data-name="autoware_processing_time_checker" data-batch="Y1">autoware_processing_time_checker</span>
+<span class="pkg trim" data-name="autoware_topic_relay_controller" data-batch="Y1">autoware_topic_relay_controller</span>
+<span class="pkg trim" data-name="autoware_velodyne_monitor" data-batch="S1">autoware_velodyne_monitor</span>
+</div></div>
+<div class="domain" data-domain="visualization">
+  <div class="domain-h" onclick="this.parentElement.classList.toggle('open')">
+    <h3>Visualization</h3>
+    <div class="meta">保留 13 · 已裁 5 · 共 18</div>
+  </div>
+  <div class="pkgs">
+<span class="pkg keep" data-name="autoware_localization_rviz_plugin">autoware_localization_rviz_plugin</span>
+<span class="pkg keep" data-name="autoware_mission_details_overlay_rviz_plugin">autoware_mission_details_overlay_rviz_plugin</span>
+<span class="pkg keep" data-name="autoware_overlay_rviz_plugin">autoware_overlay_rviz_plugin</span>
+<span class="pkg keep" data-name="autoware_perception_rviz_plugin">autoware_perception_rviz_plugin</span>
+<span class="pkg keep" data-name="autoware_planning_rviz_plugin">autoware_planning_rviz_plugin</span>
+<span class="pkg keep" data-name="autoware_string_stamped_rviz_plugin">autoware_string_stamped_rviz_plugin</span>
+<span class="pkg keep" data-name="tier4_adapi_rviz_plugin">tier4_adapi_rviz_plugin</span>
+<span class="pkg keep" data-name="tier4_control_mode_rviz_plugin">tier4_control_mode_rviz_plugin</span>
+<span class="pkg keep" data-name="tier4_datetime_rviz_plugin">tier4_datetime_rviz_plugin</span>
+<span class="pkg keep" data-name="tier4_perception_rviz_plugin">tier4_perception_rviz_plugin</span>
+<span class="pkg keep" data-name="tier4_planning_factor_rviz_plugin">tier4_planning_factor_rviz_plugin</span>
+<span class="pkg keep" data-name="tier4_state_rviz_plugin">tier4_state_rviz_plugin</span>
+<span class="pkg keep" data-name="tier4_vehicle_rviz_plugin">tier4_vehicle_rviz_plugin</span>
+<span class="pkg trim" data-name="autoware_bag_time_manager_rviz_plugin" data-batch="Y1">autoware_bag_time_manager_rviz_plugin</span>
+<span class="pkg trim" data-name="autoware_traffic_light_rviz_plugin" data-batch="P1">autoware_traffic_light_rviz_plugin</span>
+<span class="pkg trim" data-name="tier4_camera_view_rviz_plugin" data-batch="Y1">tier4_camera_view_rviz_plugin</span>
+<span class="pkg trim" data-name="tier4_manual_lane_change_rviz_plugin" data-batch="Y1">tier4_manual_lane_change_rviz_plugin</span>
+<span class="pkg trim" data-name="tier4_traffic_light_rviz_plugin" data-batch="Y1">tier4_traffic_light_rviz_plugin</span>
+</div></div>
+<div class="domain" data-domain="simulator">
+  <div class="domain-h" onclick="this.parentElement.classList.toggle('open')">
+    <h3>Simulator</h3>
+    <div class="meta">保留 5 · 已裁 2 · 共 7</div>
+  </div>
+  <div class="pkgs">
+<span class="pkg keep" data-name="autoware_dummy_perception_publisher">autoware_dummy_perception_publisher</span>
+<span class="pkg keep" data-name="autoware_learning_based_vehicle_model">autoware_learning_based_vehicle_model</span>
+<span class="pkg keep" data-name="autoware_simple_planning_simulator">autoware_simple_planning_simulator</span>
+<span class="pkg keep" data-name="autoware_vehicle_door_simulator">autoware_vehicle_door_simulator</span>
+<span class="pkg keep" data-name="tier4_dummy_object_rviz_plugin">tier4_dummy_object_rviz_plugin</span>
+<span class="pkg trim" data-name="autoware_carla_interface" data-batch="X1">autoware_carla_interface</span>
+<span class="pkg trim" data-name="autoware_fault_injection" data-batch="X1">autoware_fault_injection</span>
+</div></div>
+<div class="domain" data-domain="evaluator">
+  <div class="domain-h" onclick="this.parentElement.classList.toggle('open')">
+    <h3>Evaluator</h3>
+    <div class="meta">保留 0 · 已裁 7 · 共 7</div>
+  </div>
+  <div class="pkgs">
+<span class="pkg trim" data-name="autoware_control_evaluator" data-batch="L1">autoware_control_evaluator</span>
+<span class="pkg trim" data-name="autoware_evaluation_adapter" data-batch="X1">autoware_evaluation_adapter</span>
+<span class="pkg trim" data-name="autoware_kinematic_evaluator" data-batch="X1">autoware_kinematic_evaluator</span>
+<span class="pkg trim" data-name="autoware_localization_evaluator" data-batch="X1">autoware_localization_evaluator</span>
+<span class="pkg trim" data-name="autoware_perception_online_evaluator" data-batch="X1">autoware_perception_online_evaluator</span>
+<span class="pkg trim" data-name="autoware_planning_evaluator" data-batch="L1">autoware_planning_evaluator</span>
+<span class="pkg trim" data-name="autoware_scenario_simulator_v2_adapter" data-batch="X1">autoware_scenario_simulator_v2_adapter</span>
+</div></div>
+<div class="domain" data-domain="common">
+  <div class="domain-h" onclick="this.parentElement.classList.toggle('open')">
+    <h3>Common</h3>
+    <div class="meta">保留 45 · 已裁 2 · 共 47</div>
+  </div>
+  <div class="pkgs">
+<span class="pkg keep" data-name="autoware_agnocast_wrapper">autoware_agnocast_wrapper</span>
+<span class="pkg keep" data-name="autoware_auto_common">autoware_auto_common</span>
+<span class="pkg keep" data-name="autoware_boundary_departure_checker">autoware_boundary_departure_checker</span>
+<span class="pkg keep" data-name="autoware_component_interface_specs">autoware_component_interface_specs</span>
+<span class="pkg keep" data-name="autoware_component_interface_specs_universe">autoware_component_interface_specs_universe</span>
+<span class="pkg keep" data-name="autoware_component_interface_utils">autoware_component_interface_utils</span>
+<span class="pkg keep" data-name="autoware_cuda_dependency_meta">autoware_cuda_dependency_meta</span>
+<span class="pkg keep" data-name="autoware_fake_test_node">autoware_fake_test_node</span>
+<span class="pkg keep" data-name="autoware_geography_utils">autoware_geography_utils</span>
+<span class="pkg keep" data-name="autoware_global_parameter_loader">autoware_global_parameter_loader</span>
+<span class="pkg keep" data-name="autoware_glog_component">autoware_glog_component</span>
+<span class="pkg keep" data-name="autoware_goal_distance_calculator">autoware_goal_distance_calculator</span>
+<span class="pkg keep" data-name="autoware_grid_map_utils">autoware_grid_map_utils</span>
+<span class="pkg keep" data-name="autoware_interpolation">autoware_interpolation</span>
+<span class="pkg keep" data-name="autoware_kalman_filter">autoware_kalman_filter</span>
+<span class="pkg keep" data-name="autoware_lanelet2_utils">autoware_lanelet2_utils</span>
+<span class="pkg keep" data-name="autoware_marker_utils">autoware_marker_utils</span>
+<span class="pkg keep" data-name="autoware_motion_utils">autoware_motion_utils</span>
+<span class="pkg keep" data-name="autoware_node">autoware_node</span>
+<span class="pkg keep" data-name="autoware_object_recognition_utils">autoware_object_recognition_utils</span>
+<span class="pkg keep" data-name="autoware_osqp_interface">autoware_osqp_interface</span>
+<span class="pkg keep" data-name="autoware_path_distance_calculator">autoware_path_distance_calculator</span>
+<span class="pkg keep" data-name="autoware_point_types">autoware_point_types</span>
+<span class="pkg keep" data-name="autoware_polar_grid">autoware_polar_grid</span>
+<span class="pkg keep" data-name="autoware_qos_utils">autoware_qos_utils</span>
+<span class="pkg keep" data-name="autoware_qp_interface">autoware_qp_interface</span>
+<span class="pkg keep" data-name="autoware_signal_processing">autoware_signal_processing</span>
+<span class="pkg keep" data-name="autoware_time_utils">autoware_time_utils</span>
+<span class="pkg keep" data-name="autoware_traffic_light_utils">autoware_traffic_light_utils</span>
+<span class="pkg keep" data-name="autoware_trajectory">autoware_trajectory</span>
+<span class="pkg keep" data-name="autoware_universe_utils">autoware_universe_utils</span>
+<span class="pkg keep" data-name="autoware_utils">autoware_utils</span>
+<span class="pkg keep" data-name="autoware_utils_debug">autoware_utils_debug</span>
+<span class="pkg keep" data-name="autoware_utils_diagnostics">autoware_utils_diagnostics</span>
+<span class="pkg keep" data-name="autoware_utils_geometry">autoware_utils_geometry</span>
+<span class="pkg keep" data-name="autoware_utils_logging">autoware_utils_logging</span>
+<span class="pkg keep" data-name="autoware_utils_math">autoware_utils_math</span>
+<span class="pkg keep" data-name="autoware_utils_pcl">autoware_utils_pcl</span>
+<span class="pkg keep" data-name="autoware_utils_rclcpp">autoware_utils_rclcpp</span>
+<span class="pkg keep" data-name="autoware_utils_system">autoware_utils_system</span>
+<span class="pkg keep" data-name="autoware_utils_tf">autoware_utils_tf</span>
+<span class="pkg keep" data-name="autoware_utils_uuid">autoware_utils_uuid</span>
+<span class="pkg keep" data-name="autoware_utils_visualization">autoware_utils_visualization</span>
+<span class="pkg keep" data-name="autoware_vehicle_info_utils">autoware_vehicle_info_utils</span>
+<span class="pkg keep" data-name="tier4_api_utils">tier4_api_utils</span>
+<span class="pkg trim" data-name="autoware_component_interface_tools" data-batch="Y1">autoware_component_interface_tools</span>
+<span class="pkg trim" data-name="autoware_traffic_light_recognition_marker_publisher" data-batch="P1">autoware_traffic_light_recognition_marker_publisher</span>
+</div></div>
+
+  <h2>尚未裁剪（仍保留的重点）</h2>
+  <div class="pkgs" style="background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px">
+<span class="pkg keep">autoware_tensorrt_yolox</span>
+<span class="pkg keep">autoware_bytetrack</span>
+<span class="pkg keep">autoware_ekf_localizer</span>
+<span class="pkg keep">autoware_gnss_poser</span>
+<span class="pkg keep">autoware_imu_corrector</span>
+<span class="pkg keep">autoware_gyro_odometer</span>
+<span class="pkg keep">autoware_pose_initializer</span>
+<span class="pkg keep">autoware_pointcloud_preprocessor</span>
+<span class="pkg keep">autoware_cuda_pointcloud_preprocessor</span>
+<span class="pkg keep">autoware_behavior_path_planner</span>
+<span class="pkg keep">autoware_behavior_path_static_obstacle_avoidance_module</span>
+<span class="pkg keep">autoware_behavior_path_start_planner_module</span>
+<span class="pkg keep">autoware_behavior_path_goal_planner_module</span>
+<span class="pkg keep">autoware_motion_velocity_obstacle_stop_module</span>
+<span class="pkg keep">autoware_mpc_lateral_controller</span>
+<span class="pkg keep">autoware_pid_longitudinal_controller</span>
+<span class="pkg keep">autoware_vehicle_cmd_gate</span>
+<span class="pkg keep">autoware_mrm_handler</span>
+<span class="pkg keep">autoware_diagnostic_graph_aggregator</span>
+<span class="pkg keep">autoware_simple_planning_simulator</span>
+<span class="pkg keep">autoware_localization_rviz_plugin</span>
+<span class="pkg keep">autoware_planning_rviz_plugin</span>
+<span class="pkg keep">tier4_state_rviz_plugin</span>
+
+  </div>
+
+  <p class="note">
+    已裁合计 196 包（含架构图外的 Nebula/eagleye/sensor kit 等）。
+    RViz 插件按用户要求<strong>已恢复</strong>，不再作为裁剪目标。
+    下一步可选：继续非 viz 叶子裁剪，或进入 repos/源码 DROP 真瘦身。
+    同源 Canvas：autoware-universe-architecture.canvas.tsx（已同步打灰逻辑）。
+  </p>
+</div>
+<script>
+const q = document.getElementById('q');
+const mode = document.getElementById('mode');
+function apply() {
+  const term = (q.value || '').toLowerCase();
+  const m = mode.value;
+  document.querySelectorAll('.pkg').forEach(el => {
+    const name = el.dataset.name || el.textContent;
+    const isTrim = el.classList.contains('trim');
+    let ok = true;
+    if (m === 'kept' && isTrim) ok = false;
+    if (m === 'trim' && !isTrim) ok = false;
+    if (term && !name.toLowerCase().includes(term)) ok = false;
+    el.style.display = ok ? '' : 'none';
+  });
+}
+q.addEventListener('input', apply);
+mode.addEventListener('change', apply);
+</script>
+</body>
+</html>
