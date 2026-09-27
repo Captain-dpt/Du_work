@@ -2,7 +2,15 @@
 
 个人工程文档与复现脚本归档。目前主要记录 **Ubuntu 22.04 + Unreal Engine 4.26 + CARLA 0.9.15** 的源码编译实践，供以后重装系统、迁移设备或复现开发环境时查阅。
 
-## 文件索引
+## Autoware AiLabCar Lite · 裁剪与快速移植
+
+[进入 Autoware AiLabCar Lite 专项目录](Autoware_AiLabCar_Lite/) · [阅读项目专属 README](Autoware_AiLabCar_Lite/README.md)
+
+本目录收录无人方程式赛车 Autoware 轻量化的总体架构规划、已裁剪包级架构快照及快速移植三件套（迁移手册、`apply_lite_trim.py`、包名清单）。**注意总体设计文件标注 tag 1.71.2，快速移植资料标注 1.7.1；运行前先核对目标版本并按文档 dry-run 和验收。**
+
+---
+
+## CARLA 文件索引
 
 | 文件 | 用途 | 什么时候使用 |
 | --- | --- | --- |
