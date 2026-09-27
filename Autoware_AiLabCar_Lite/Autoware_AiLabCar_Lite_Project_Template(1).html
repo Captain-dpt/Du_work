@@ -1,0 +1,2134 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Autoware AiLabCar Lite · 架构裁剪专项</title>
+<style>
+:root{
+  --bg:#f6f7f9; --paper:#fff; --ink:#20242c; --muted:#6c7480; --line:#e4e7ec;
+  --accent:#5562ea; --accent-soft:#eef0ff;
+  --green:#2f9d62; --green-bg:#eaf7ef;
+  --amber:#c99316; --amber-bg:#fff7dd;
+  --red:#d95757; --red-bg:#fff0f0;
+  --blue:#4e79d8; --blue-bg:#edf3ff;
+  --shadow:0 8px 30px rgba(25,35,55,.06);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);font-family:Inter,"PingFang SC","Microsoft YaHei",Arial,sans-serif;color:var(--ink)}
+.topbar{
+  position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);padding:10px 28px;display:flex;justify-content:space-between;align-items:center
+}
+.brand{font-weight:850;font-size:15px}
+.nav{display:flex;gap:8px;flex-wrap:wrap}
+.nav a{font-size:12px;text-decoration:none;color:#4b5563;padding:7px 9px;border-radius:8px}
+.nav a:hover{background:#f1f3f6;color:#111827}
+.wrap{max-width:1280px;margin:auto;padding:34px 26px 60px}
+.hero{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:28px;box-shadow:var(--shadow)}
+.eyebrow{font-size:12px;color:#7b8490;font-weight:800;letter-spacing:.8px}
+h1{font-size:32px;line-height:1.18;margin:8px 0 10px}
+.lead{font-size:14px;color:#616b78;line-height:1.75;max-width:900px}
+.meta{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
+.chip{font-size:11px;font-weight:800;padding:5px 9px;border-radius:999px;background:#f3f4f6;color:#525c69;border:1px solid #e5e7eb}
+.statusline{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 240px;gap:18px;align-items:center}
+.stage-now{font-size:13px;color:#4b5563}
+.stage-now b{display:block;font-size:18px;color:#111827;margin-top:4px}
+.progressbox{font-size:11px;color:#6b7280}
+.progress{height:8px;background:#eef1f4;border-radius:999px;overflow:hidden;margin-top:7px}
+.progress > div{height:100%;width:0;background:linear-gradient(90deg,#6975ef,#5965dd);transition:.35s}
+
+section{margin-top:22px;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--shadow)}
+section h2{font-size:20px;margin:0 0 6px}
+.section-sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{border:1px solid var(--line);border-radius:13px;padding:15px;background:#fff}
+.card h3{margin:0 0 7px;font-size:14px}
+.card p,.card li{font-size:12px;line-height:1.7;color:#56616f}
+.card ul{margin:6px 0 0;padding-left:18px}
+.keep{background:var(--green-bg);border-left:4px solid var(--green)}
+.opt{background:var(--amber-bg);border-left:4px solid var(--amber)}
+.remove{background:var(--red-bg);border-left:4px solid var(--red)}
+.info{background:var(--blue-bg);border-left:4px solid var(--blue)}
+.label{display:inline-block;font-size:10px;font-weight:900;letter-spacing:.5px;margin-bottom:7px}
+.keep .label{color:#1b7b47}.opt .label{color:#8c6708}.remove .label{color:#a93535}.info .label{color:#3b60b4}
+
+.arch-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:
+ radial-gradient(circle at 1px 1px,#e2e7ef 1px,transparent 1.1px);
+ background-size:22px 22px;padding:14px}
+.arch{position:relative;width:1180px;height:680px}
+.arch svg{position:absolute;inset:0;width:1180px;height:680px;pointer-events:none}
+.edge{stroke:#8996a8;stroke-width:2;fill:none;marker-end:url(#arrow);stroke-linejoin:round;stroke-linecap:round}
+.edge.map{stroke:#4d9883}.edge.data{stroke:#596bd0}
+.node{
+  position:absolute;width:170px;min-height:68px;border:1px solid #dce1e8;border-left:4px solid #5c79da;
+  border-radius:10px;background:#fff;padding:10px 11px;box-shadow:0 5px 14px rgba(34,47,70,.06)
+}
+.node strong{display:block;font-size:12px}
+.node small{display:block;font-size:10.5px;color:#667383;line-height:1.45;margin-top:5px}
+.node.keep{background:var(--green-bg);border-left-color:var(--green)}
+.node.opt{background:var(--amber-bg);border-left-color:var(--amber)}
+.node.remove{background:var(--red-bg);border-left-color:var(--red)}
+.node.info{background:var(--blue-bg);border-left-color:var(--blue)}
+.group-title{position:absolute;font-size:11px;font-weight:900;letter-spacing:.8px;color:#7a8796}
+
+.flow-note{font-size:11px;color:#687383;margin-top:12px}
+
+.table{width:100%;border-collapse:collapse;font-size:12px}
+.table th,.table td{border-bottom:1px solid var(--line);padding:10px 8px;text-align:left;vertical-align:top}
+.table th{color:#55606e;background:#f8f9fb;font-size:11px}
+.badge{font-size:10px;font-weight:900;border-radius:999px;padding:3px 7px;white-space:nowrap}
+.bkeep{background:#dff3e7;color:#267647}.bopt{background:#ffedb8;color:#80600d}.bremove{background:#ffdddd;color:#a03434}
+
+.timeline{display:grid;grid-template-columns:repeat(8,1fr);gap:7px;margin:6px 0 18px}
+.week{border:1px solid var(--line);border-radius:8px;padding:8px 5px;text-align:center;font-size:10px;background:#fafbfc}
+.week.active{background:var(--accent-soft);border-color:#aab2ff;color:#3f4bb9;font-weight:900}
+.phases{display:grid;gap:10px}
+.phase{border:1px solid var(--line);border-radius:12px;padding:14px}
+.phase-head{display:flex;justify-content:space-between;gap:15px;align-items:flex-start}
+.phase-title{font-size:14px;font-weight:850}
+.phase-meta{font-size:11px;color:#7a8390;margin-top:3px}
+.counter{font-size:11px;color:#6c7480;white-space:nowrap}
+.tasks{display:grid;gap:7px;margin-top:11px}
+.task{display:flex;align-items:flex-start;gap:9px;font-size:12px;color:#4f5a68;line-height:1.55}
+.task input{margin-top:2px}
+.decision{font-size:11px;font-weight:900;color:#4d5bcc;background:#eef0ff;border-radius:8px;padding:7px 9px;margin-top:10px}
+
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.metric{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff}
+.metric b{display:block;font-size:18px}
+.metric span{font-size:11px;color:#6c7480;line-height:1.5}
+
+pre{background:#f7f8fa;border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;color:#334155}
+
+@media(max-width:900px){
+  .grid2,.grid3,.metrics{grid-template-columns:1fr}.statusline{grid-template-columns:1fr}
+  .timeline{grid-template-columns:repeat(4,1fr)}.topbar{align-items:flex-start;gap:12px;flex-direction:column}
+}
+
+/* === v7 engineering sections === */
+.eng-box{border:1px solid #d6dde6;border-radius:14px;background:#fbfcfd;padding:16px}
+.eng-grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.eng-grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.eng-title{font-size:13px;font-weight:850;color:#344054;margin-bottom:8px}
+.eng-text{font-size:11px;line-height:1.65;color:#5d6877}
+.eng-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;color:#4b5c73}
+.eng-note{margin-top:12px;padding:11px 13px;border:1px dashed #c5cfda;border-radius:10px;background:#fafbfc;font-size:11px;color:#627080;line-height:1.65}
+.contract-table,.resource-table{width:100%;border-collapse:collapse;font-size:11px}
+.contract-table th,.resource-table th{background:#f7f8fa;color:#536171;padding:10px 9px;border-bottom:1px solid #d7dee7;text-align:left}
+.contract-table td,.resource-table td{padding:10px 9px;border-bottom:1px solid #e1e6ec;vertical-align:top;color:#4f5b69;line-height:1.5}
+.contract-table tr:last-child td,.resource-table tr:last-child td{border-bottom:none}
+.contract-table-wrap,.resource-table-wrap{border:1px solid #d5dce5;border-radius:12px;overflow:hidden;background:#fff}
+.state-flow{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.state-box{padding:8px 11px;border-radius:8px;border:1.5px solid #687892;background:#fff;font-size:10.5px;font-weight:800;color:#3d4a5e}
+.state-box.keep{border-color:#2f9d62;background:#eaf7ef;color:#237649}
+.state-box.warn{border-color:#ca8a22;background:#fff4e4;color:#98600c}
+.state-box.stop{border-color:#c95858;background:#fff0f0;color:#9d3838}
+.state-arrow{font-size:18px;color:#7b8797}
+.safety-chain{display:flex;align-items:stretch;gap:9px;flex-wrap:wrap}
+.safety-node{min-width:150px;flex:1;border:1px solid #d6dde6;border-radius:10px;padding:11px;background:#fff;font-size:11px;color:#556171;line-height:1.55}
+.safety-node b{display:block;color:#334155;margin-bottom:4px}
+.deploy-tree{margin:0;background:#f7f8fa;border:1px solid #d9dfe7;border-radius:10px;padding:13px;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;color:#42516a;white-space:pre-wrap}
+
+/* Kanban */
+.kanban-toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin:8px 0 14px}
+.kanban-summary{display:flex;gap:10px;flex-wrap:wrap}
+.kstat{padding:6px 10px;border-radius:999px;background:#f5f7fa;border:1px solid #dce2ea;font-size:11px;color:#586575}
+.kstat b{color:#263345}
+.kanban-actions{display:flex;gap:8px}
+.kbtn{border:1px solid #d4dae3;background:#fff;color:#445267;border-radius:8px;padding:7px 10px;font-size:11px;font-weight:750;cursor:pointer}
+.kbtn:hover{background:#f6f8fa}
+.kanban-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.kcol{background:#f5f7f9;border:1px solid #d9e0e7;border-radius:14px;padding:12px;min-height:470px}
+.kcol.dragover{outline:2px solid #7484e8;background:#eef0ff}
+.kcol-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:0 2px}
+.kcol-title{font-size:13px;font-weight:850;color:#344054}
+.kcount{font-size:10px;border-radius:999px;background:#e9edf2;padding:3px 7px;color:#677487}
+.kcards{display:grid;gap:9px}
+.ktask{background:#fff;border:1px solid #d9e0e7;border-radius:11px;padding:11px;box-shadow:0 3px 10px rgba(28,39,57,.045);cursor:grab}
+.ktask:active{cursor:grabbing}
+.ktask.done{opacity:.72;background:#f2f7f4}
+.ktask-top{display:flex;align-items:flex-start;gap:8px}
+.ktask-check{margin-top:3px;accent-color:#2f9d62}
+.ktask-main{min-width:0;flex:1}
+.ktask-title{font-size:11.5px;font-weight:800;color:#344054;line-height:1.45}
+.ktask.done .ktask-title{text-decoration:line-through;color:#728078}
+.ktask-desc{font-size:10.5px;color:#687586;line-height:1.55;margin-top:5px}
+.ktask-meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.kbadge{font-size:9px;font-weight:850;border-radius:999px;padding:3px 6px;border:1px solid}
+.kp0{background:#fff0f0;border-color:#df8b8b;color:#a34444}
+.kp1{background:#fff5df;border-color:#ddb25a;color:#8b650d}
+.kp2{background:#edf4ff;border-color:#83a4e1;color:#4969a6}
+.karea{background:#f4f5f7;border-color:#cbd2dc;color:#5d6877}
+.ktask-status{margin-left:auto;border:0;background:transparent;color:#7a8796;font-size:9px;cursor:pointer;padding:0}
+.kfooter{margin-top:13px;font-size:10.5px;color:#6b7787;line-height:1.55}
+.kprogress{height:8px;border-radius:999px;background:#e9edf2;overflow:hidden;margin-top:7px}
+.kprogress>div{height:100%;background:linear-gradient(90deg,#5d6ee4,#35a66d);width:0;transition:.2s}
+@media(max-width:950px){
+  .eng-grid2,.eng-grid3,.kanban-board{grid-template-columns:1fr}
+  .contract-table-wrap,.resource-table-wrap{overflow:auto}
+  .contract-table,.resource-table{min-width:900px}
+}
+
+
+/* === v8 Kanban color refinement === */
+.kcol[data-status="todo"]{
+  background:#f1f5fb;
+  border-color:#cbd8ea;
+}
+.kcol[data-status="doing"]{
+  background:#fff8e8;
+  border-color:#ead4a1;
+}
+.kcol[data-status="done"]{
+  background:#eef8f1;
+  border-color:#bedfc9;
+}
+.kcol[data-status="todo"] .kcol-title{color:#49698f}
+.kcol[data-status="doing"] .kcol-title{color:#9a6a12}
+.kcol[data-status="done"] .kcol-title{color:#29764b}
+.kcol[data-status="todo"] .kcount{background:#e1ebf7;color:#4d6f96}
+.kcol[data-status="doing"] .kcount{background:#ffebbd;color:#90610e}
+.kcol[data-status="done"] .kcount{background:#dcefe3;color:#2d754d}
+
+.kcol[data-status="todo"] .ktask{
+  border-left:4px solid #6f91bb;
+  background:#ffffff;
+}
+.kcol[data-status="doing"] .ktask{
+  border-left:4px solid #d79b2f;
+  background:#fffdfa;
+}
+.kcol[data-status="done"] .ktask{
+  border-left:4px solid #48a06a;
+  background:#f8fcf9;
+}
+.kcol[data-status="todo"] .ktask:hover{box-shadow:0 7px 18px rgba(73,105,143,.12)}
+.kcol[data-status="doing"] .ktask:hover{box-shadow:0 7px 18px rgba(154,106,18,.12)}
+.kcol[data-status="done"] .ktask:hover{box-shadow:0 7px 18px rgba(41,118,75,.12)}
+
+.kp0{background:#f3edff;border-color:#bda8e8;color:#6c4da2}
+.kp1{background:#edf4ff;border-color:#8cb0e5;color:#496fa8}
+.kp2{background:#eaf7f7;border-color:#83c0c1;color:#3d7f80}
+.kp3{background:#fff3df;border-color:#dfb45d;color:#8b650d}
+.kp4{background:#fff0e7;border-color:#df9d72;color:#9a5d32}
+.kp5{background:#eef8f1;border-color:#8fc9a2;color:#34754e}
+.kdeliver{background:#f4f1ff;border-color:#c8bbe8;color:#6a5597}
+.kaccept{background:#f0f8f2;border-color:#b8d9c3;color:#3e7251}
+
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">Autoware AiLabCar Lite · 专项规划</div>
+  <div class="nav">
+    <a href="#goal">目标与边界</a><a href="#architecture">平台架构</a><a href="#official-node-diagram">官方总图</a><a href="#package-structure">包结构</a><a href="#source-architecture">源码架构</a><a href="#dependency">依赖关系</a><a href="#contracts">接口契约</a><a href="#slim">裁剪策略</a>
+    <a href="#state-machine">模式状态机</a><a href="#runtime">Runtime</a><a href="#safety">安全</a><a href="#resources">资源预算</a><a href="#task-board">任务看板</a><a href="#metrics">验收指标</a><a href="#risk">风险与对策</a>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="hero">
+    <div class="eyebrow">专项 · W1–W8 · AUTOWARE TAG 1.71.2 / ROS 2 HUMBLE</div>
+    <h1>无人方程式赛车 Autoware 架构裁剪与轻量化</h1>
+    <div class="lead">
+      基于现有无人车工作链路，把完整 Autoware 从面向城市 RoboTaxi 的大系统，裁剪成面向比赛的最小运行栈：
+      <b>Camera + YOLO / LiDAR → 实时建图 → Route / Planning → Control → CAN</b>。
+      核心原则是先完整编译并建立基线，再逐批裁剪、边裁边测；得到 Minimal Stable 后按统一 Config + 功能域目录进行源码重构，最后做 install-only Runtime 部署。
+    </div>
+    <div class="meta">
+      <span class="chip">Ubuntu 22.04</span><span class="chip">ROS 2 Humble</span><span class="chip">Autoware tag 1.71.2</span>
+      <span class="chip">YOLO + LiDAR</span><span class="chip">Realtime Lanelet2</span><span class="chip">Orin Runtime</span>
+    </div>
+    <div class="statusline">
+      <div class="stage-now">当前阶段<b>P0 · 系统盘点与依赖基线</b><span>下一个决策节点：G0 · 最小功能边界确认</span></div>
+      <div class="progressbox">任务完成 <span id="allCount">0/32</span><div class="progress"><div id="allProgress"></div></div></div>
+    </div>
+  </div>
+
+  
+  <section id="goal">
+    <h2>目标与边界</h2>
+    <div class="section-sub">先明确 Autoware AiLabCar Lite 要保留什么、替换什么、明确不做什么，再进入 workspace 裁剪。所有裁剪都围绕比赛闭环：感知 → 实时建图 → 规划 → 控制。</div>
+
+    <style>
+      .goal-legend{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0 18px}
+      .goal-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:12px;color:#374151}
+      .goal-dot{width:9px;height:9px;border-radius:50%}
+      .goal-board{border:1px solid #cfd6df;border-radius:14px;background:#fbfbfa;padding:18px}
+      .goal-row{display:grid;grid-template-columns:170px 1fr;gap:18px;align-items:start;padding:16px 18px;background:#eef1f3;border:1px solid #d4dbe3;border-radius:14px;margin-bottom:12px}
+      .goal-row:last-child{margin-bottom:0}
+      .goal-title{font-size:13px;color:#4d88b3;font-weight:800;padding-top:5px}
+      .goal-items{display:flex;flex-wrap:wrap;gap:10px}
+      .goal-box{display:inline-flex;align-items:center;min-height:36px;padding:8px 14px;border-radius:8px;border:1.8px solid;font-size:12px;line-height:1.45}
+      .goal-box.keep{background:#eef8f1;border-color:#2f8f59;color:#2f8f59}
+      .goal-box.opt{background:#fff6e8;border-color:#cc8b28;color:#ad7114}
+      .goal-box.remove{background:#f1f3f5;border-color:#708197;color:#617084}
+      .goal-foot{text-align:center;font-size:12px;color:#6b7280;margin-top:14px}
+      @media(max-width:900px){.goal-row{grid-template-columns:1fr}.goal-title{padding-top:0}}
+    </style>
+
+    <div class="goal-legend">
+      <div class="goal-pill"><span class="goal-dot" style="background:#2f8f59"></span>核心目标</div>
+      <div class="goal-pill"><span class="goal-dot" style="background:#cc8b28"></span>替换边界</div>
+      <div class="goal-pill"><span class="goal-dot" style="background:#708197"></span>明确移除</div>
+    </div>
+
+    <div class="goal-board">
+      <div class="goal-row">
+        <div class="goal-title">核心目标</div>
+        <div class="goal-items">
+          <div class="goal-box keep">YOLO + LiDAR 感知</div>
+          <div class="goal-box keep">实时局部建图 / Lanelet2</div>
+          <div class="goal-box keep">赛道规划与轨迹生成</div>
+          <div class="goal-box keep">横纵向控制 + CAN</div>
+        </div>
+      </div>
+
+      <div class="goal-row">
+        <div class="goal-title">必须保留的系统契约</div>
+        <div class="goal-items">
+          <div class="goal-box keep">ego pose / velocity / yaw</div>
+          <div class="goal-box keep">map → odom → base_link TF</div>
+          <div class="goal-box keep">/planning/trajectory</div>
+          <div class="goal-box keep">control_cmd / vehicle interface</div>
+        </div>
+      </div>
+
+      <div class="goal-row">
+        <div class="goal-title">替换 / 轻量化边界</div>
+        <div class="goal-items">
+          <div class="goal-box opt">NDT / PCD 定位 → GNSS / IMU / 轻量状态估计</div>
+          <div class="goal-box opt">预制 HD Map → 实时局部地图</div>
+          <div class="goal-box opt">完整 Mission / Behavior → 赛道轻量规划</div>
+          <div class="goal-box opt">Map-based Prediction → 运动学外推</div>
+        </div>
+      </div>
+
+      <div class="goal-row">
+        <div class="goal-title">明确不进入比赛 Runtime</div>
+        <div class="goal-items">
+          <div class="goal-box remove">Traffic Light 全链</div>
+          <div class="goal-box remove">Radar / V2X</div>
+          <div class="goal-box remove">Intersection / Crosswalk / Parking 等城市规则</div>
+          <div class="goal-box remove">Simulator / Evaluator</div>
+          <div class="goal-box remove">非必要 AD API / HMI</div>
+          <div class="goal-box remove">Runtime RViz 与开发工具</div>
+        </div>
+      </div>
+    </div>
+    <div class="goal-foot">目标不是“删除最多”，而是以最少依赖完整维持 AiLabCar 的闭环功能、稳定性与安全边界。</div>
+  </section>
+
+
+  
+  <section id="architecture">
+    <h2>平台架构层 · 三色判断</h2>
+    <div class="section-sub">按“保留复用 / 替换适配 / 精简移除”给每个模块下判断。核心逻辑是：感知与控制的输入输出契约与地图方式基本无关，可以原样复用；定位、地图、规划三层是裁剪与替换的重点区域。</div>
+
+    <style>
+      .tri-legend{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0 18px}
+      .tri-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:12px;color:#374151}
+      .tri-dot{width:9px;height:9px;border-radius:50%}
+      .tri-board{border:1px solid #cfd6df;border-radius:14px;background:#f8f8f7;padding:18px}
+      .tri-layout{display:grid;grid-template-columns:1fr 220px;gap:16px;align-items:start}
+      .tri-main{display:flex;flex-direction:column;gap:12px}
+      .tri-layer{
+        background:#eef1f3;border:1px solid #d4dbe3;border-radius:14px;padding:16px 16px 14px;position:relative
+      }
+      .tri-layer-title{font-size:13px;font-weight:800;color:#4d88b3;margin-bottom:13px}
+      .tri-row{display:flex;gap:10px;flex-wrap:wrap}
+      .tri-box{
+        display:inline-flex;align-items:center;min-height:34px;padding:8px 14px;border-radius:8px;
+        border:1.8px solid #7e8da1;background:#fff;font-size:12px;color:#4b5563
+      }
+      .tri-box.keep{background:#eef8f1;border-color:#2f8f59;color:#2f8f59}
+      .tri-box.opt{background:#fff6e8;border-color:#cc8b28;color:#b77010}
+      .tri-box.remove{background:#f3f4f6;border-color:#708197;color:#617084}
+      .tri-arrow{display:flex;justify-content:center;align-items:center;height:8px;font-size:22px;color:#6b7280;margin-top:-2px;margin-bottom:-2px}
+      .tri-side{
+        min-height:672px;background:#eef1f3;border:1px dashed #cfd6df;border-radius:14px;padding:16px
+      }
+      .tri-side .tri-layer-title{margin-bottom:12px}
+      .tri-side .tri-row{flex-direction:column}
+      .tri-footnote{text-align:center;font-size:12px;color:#6b7280;margin-top:14px}
+      @media(max-width:980px){
+        .tri-layout{grid-template-columns:1fr}
+        .tri-side{min-height:auto}
+      }
+    </style>
+
+    <div class="tri-legend">
+      <div class="tri-pill"><span class="tri-dot" style="background:#2f8f59"></span>保留复用</div>
+      <div class="tri-pill"><span class="tri-dot" style="background:#cc8b28"></span>替换适配</div>
+      <div class="tri-pill"><span class="tri-dot" style="background:#708197"></span>精简移除</div>
+    </div>
+
+    <div class="tri-board">
+      <div class="tri-layout">
+        <div class="tri-main">
+
+          <div class="tri-layer">
+            <div class="tri-layer-title">感知输入层</div>
+            <div class="tri-row">
+              <div class="tri-box keep">LiDAR 驱动</div>
+              <div class="tri-box keep">Camera 驱动</div>
+              <div class="tri-box keep">GNSS / IMU</div>
+              <div class="tri-box keep">点云预处理</div>
+            </div>
+          </div>
+
+          <div class="tri-arrow">↓</div>
+
+          <div class="tri-layer">
+            <div class="tri-layer-title">定位与地图层</div>
+            <div class="tri-row">
+              <div class="tri-box opt">NDT 匹配 → 轻量定位</div>
+              <div class="tri-box opt">EKF / 状态估计（保留，替输入）</div>
+              <div class="tri-box opt">点云地图 → 实时局部地图</div>
+              <div class="tri-box opt">Lanelet2 → 按需简化</div>
+            </div>
+          </div>
+
+          <div class="tri-arrow">↓</div>
+
+          <div class="tri-layer">
+            <div class="tri-layer-title">感知理解层</div>
+            <div class="tri-row">
+              <div class="tri-box keep">相机 2D 检测 YOLO</div>
+              <div class="tri-box keep">LiDAR 3D 检测 / 聚类</div>
+              <div class="tri-box keep">感知融合</div>
+              <div class="tri-box keep">多目标跟踪</div>
+              <div class="tri-box opt">轨迹预测 → 运动学外推</div>
+            </div>
+          </div>
+
+          <div class="tri-arrow">↓</div>
+
+          <div class="tri-layer">
+            <div class="tri-layer-title">规划层</div>
+            <div class="tri-row">
+              <div class="tri-box opt">任务规划 → 目标点驱动</div>
+              <div class="tri-box opt">行为规划 → 轻量替代</div>
+              <div class="tri-box opt">运动规划（复用算法，替换输入）</div>
+            </div>
+          </div>
+
+          <div class="tri-arrow">↓</div>
+
+          <div class="tri-layer">
+            <div class="tri-layer-title">控制层</div>
+            <div class="tri-row">
+              <div class="tri-box keep">轨迹跟踪 MPC / PID / LQR</div>
+              <div class="tri-box keep">指令仲裁 vehicle_cmd_gate</div>
+            </div>
+          </div>
+
+          <div class="tri-arrow">↓</div>
+
+          <div class="tri-layer">
+            <div class="tri-layer-title">车辆接口层</div>
+            <div class="tri-row">
+              <div class="tri-box keep">车辆驱动 / CAN Interface</div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="tri-side">
+          <div class="tri-layer-title">系统与外围</div>
+          <div class="tri-row">
+            <div class="tri-box keep">诊断与 MRM（精简保留）</div>
+            <div class="tri-box remove">仿真器（仅开发）</div>
+            <div class="tri-box remove">评估器</div>
+            <div class="tri-box remove">AD API / HMI</div>
+            <div class="tri-box remove">V2X / Radar</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tri-footnote">绿色保留 · 琥珀替换 · 灰色移除 ｜ 改动集中在定位 / 地图 / 规划三层</div>
+    </div>
+  </section>
+
+  
+  <section id="official-node-diagram">
+    <h2>Autoware 官方总体节点图 · AiLabCar 裁剪标注</h2>
+    <div class="section-sub">
+      下图为重新绘制后的 Autoware 官方总体节点图，并已按 Autoware AiLabCar Lite 的裁剪策略完成灰化标注。
+      灰色区域表示当前确定不进入比赛 Runtime 的模块；保留与替换适配模块保持彩色显示。
+      实际 package / launch / dependency 裁剪仍应以项目本地 <b>tag 1.71.2</b> 为最终依据。
+    </div>
+
+    <style>
+      .official-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0 14px}
+      .official-legend{display:flex;gap:10px;flex-wrap:wrap}
+      .official-key{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:11px;color:#4b5563}
+      .official-gray{width:12px;height:12px;border-radius:3px;background:rgba(105,115,128,.58);border:1px solid #667085}
+      .official-color{width:12px;height:12px;border-radius:3px;background:#5b8def;border:1px solid #3f6ecc}
+      .official-action{display:inline-flex;gap:8px}
+      .official-btn{display:inline-block;text-decoration:none;border:1px solid #cfd6df;background:#fff;color:#42526a;padding:8px 12px;border-radius:8px;font-size:11px;font-weight:700}
+      .official-btn:hover{background:#f4f6f8}
+      .official-frame{position:relative;width:100%;border:1px solid #cfd6df;border-radius:14px;background:#fff;overflow:hidden;padding:10px}
+      .official-frame img{display:block;width:100%;height:auto;border-radius:10px}
+      .official-caption{font-size:11px;color:#6b7280;line-height:1.65;margin-top:12px}
+      .official-list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+      .official-list .x{border:1px solid #d7dde5;border-radius:10px;padding:11px;background:#f2f4f6;color:#5f6b79;font-size:11px;line-height:1.55}
+      @media(max-width:900px){.official-list{grid-template-columns:1fr}}
+
+      .nd-wrap{border:1px solid #cfd6df;border-radius:14px;background:#fff;padding:18px;overflow-x:auto}
+      .nd-grid-top{display:flex;align-items:flex-start;gap:10px;flex-wrap:nowrap;min-width:1300px}
+      .nd-col{display:flex;flex-direction:column;gap:8px;width:152px;flex:0 0 152px}
+      .nd-col-title{font-size:10.5px;font-weight:900;letter-spacing:.4px;color:#55606e;text-align:center;margin-bottom:2px}
+      .nd-arrow{align-self:flex-start;color:#9aa4b2;font-size:16px;padding-top:58px;flex:0 0 22px;text-align:center}
+      .nd-note-inline{align-self:flex-start;font-size:9.5px;color:#7b8592;line-height:1.5;text-align:center;flex:0 0 92px;padding-top:58px}
+      .nd-card{border-radius:8px;padding:8px 9px;border:1.4px solid}
+      .nd-card b{display:block;font-size:10.5px;margin-bottom:3px}
+      .nd-card span{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5px;line-height:1.5}
+      .nd-card.keep{background:var(--green-bg);border-color:var(--green);color:#1b7b47}
+      .nd-card.keep span{color:#2f7d55}
+      .nd-card.opt{background:var(--amber-bg);border-color:var(--amber);color:#8c6708}
+      .nd-card.opt span{color:#8c6708}
+      .nd-card.remove{background:var(--red-bg);border-color:var(--red);color:#a03434;opacity:.85}
+      .nd-card.remove span{color:#a95050}
+      .nd-card.info{background:var(--blue-bg);border-color:var(--blue);color:#3b60b4}
+      .nd-card.info span{color:#4e6fb8}
+      .nd-card.dev{background:#f2f0ff;border-color:#8b7ee0;color:#5d4fa8}
+      .nd-card.dev span{color:#6f61b8}
+      .nd-arrow-down{text-align:center;color:#9aa4b2;font-size:11px;margin:10px 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+      .nd-band{border:1px dashed #cfd6df;border-radius:12px;padding:12px;background:#fbfbfa;min-width:1300px}
+      .nd-band-title{font-size:10.5px;font-weight:900;color:#55606e;margin-bottom:8px;letter-spacing:.4px}
+      .nd-band-body{display:flex;gap:8px;flex-wrap:wrap}
+      .nd-band-body .nd-card{flex:1 1 150px;min-width:150px}
+      .nd-band-body .nd-card.wide{flex-basis:100%}
+      .nd-grid-bottom{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px;min-width:1300px}
+    </style>
+
+    <div class="official-toolbar">
+      <div class="official-legend">
+        <span class="official-key"><span class="official-gray" style="background:var(--green);border-color:#237649"></span>保留 Keep</span>
+        <span class="official-key"><span class="official-gray" style="background:var(--amber);border-color:#9b640d"></span>替换 / 精简 Adapt</span>
+        <span class="official-key"><span class="official-gray" style="background:var(--red);border-color:#a34444"></span>移除 Remove</span>
+        <span class="official-key"><span class="official-gray" style="background:#8b7ee0;border-color:#5d4fa8"></span>仅开发 Dev-only</span>
+      </div>
+      <div class="official-action">
+        <a class="official-btn" target="_blank" rel="noopener"
+           href="https://app.diagrams.net/?lightbox=1#Uhttps%3A%2F%2Fautowarefoundation.github.io%2Fautoware-documentation%2Fmain%2Fdesign%2Fautoware-architecture-v1%2Fnode-diagram%2Foverall-node-diagram-autoware-universe.drawio.svg#%7B%22pageId%22%3A%22T6t2FfeAp1iw48vGkmOz%22%7D">
+          查看官方原始图
+        </a>
+      </div>
+    </div>
+
+    <div class="nd-wrap">
+<div class="nd-grid-top">
+<div class="nd-col"><div class="nd-col-title">SENSING 传感</div><div class="nd-col-body"><div class="nd-card keep"><b>LiDAR</b><span>pointcloud_preprocessor · lidar_driver</span></div><div class="nd-card keep"><b>Camera</b><span>image_proc · camera_driver</span></div><div class="nd-card keep"><b>GNSS</b><span>ublox_driver · nmea_to_ros</span></div><div class="nd-card keep"><b>IMU</b><span>imu_driver · imu_corrector</span></div><div class="nd-card remove"><b>Radar（移除）</b><span>radar_driver · radar_object_converter</span></div><div class="nd-card remove"><b>V2X / RSU（移除）</b><span>v2x_driver · v2x_receiver</span></div></div></div>
+<div class="nd-arrow">→</div>
+<div class="nd-col"><div class="nd-col-title">LOCALIZATION 定位</div><div class="nd-col-body"><div class="nd-card opt"><b>NDT Scan Matcher</b><span>ndt_scan_matcher</span></div><div class="nd-card keep"><b>EKF Localizer</b><span>ekf_localizer</span></div><div class="nd-card remove"><b>Pose Graph Optimizer（移除）</b><span>pose_graph_optimizer</span></div></div></div>
+<div class="nd-note-inline">/localization/pose<br>/tf(map→base_link)</div>
+<div class="nd-arrow">→</div>
+<div class="nd-col"><div class="nd-col-title">MAP 地图</div><div class="nd-col-body"><div class="nd-card opt"><b>Map Loader</b><span>lanelet2_map_loader · pointcloud_map_loader</span></div><div class="nd-card opt"><b>Map Processing</b><span>lanelet2_map_preprocessor · map_projection</span></div><div class="nd-card info"><b>Map Data</b><span>Lanelet2 map(OSM) · Pointcloud map(PCD) · Vector map</span></div></div></div>
+<div class="nd-arrow">→</div>
+<div class="nd-col"><div class="nd-col-title">PLANNING 规划</div><div class="nd-col-body"><div class="nd-card opt"><b>Mission Planner</b><span>mission_planner</span></div><div class="nd-card opt"><b>Route Planning</b><span>global_path_planner</span></div><div class="nd-card opt"><b>Behavior Planning</b><span>behavior_path_planner · behavior_velocity_planner</span></div><div class="nd-card keep"><b>Motion Planning</b><span>motion_planner · motion_velocity_smoother</span></div><div class="nd-card remove wide"><b>Scenario / Regulatory Modules（移除）</b><span>Lane Change · Start/Goal Planner · Side Shift · Intersection · Crosswalk · Walkway · Blind Spot · Detection Area · Virtual Traffic Light · Stop Line · No Stopping Area · Out of Lane · Parking</span></div></div></div>
+<div class="nd-arrow">→</div>
+<div class="nd-col"><div class="nd-col-title">CONTROL 控制</div><div class="nd-col-body"><div class="nd-card keep"><b>Trajectory Follower</b><span>mpc_lateral_controller · pid_longitudinal_controller</span></div><div class="nd-card keep"><b>备选横向控制</b><span>lqr_controller</span></div><div class="nd-card keep"><b>Vehicle Interface</b><span>vehicle_cmd_gate · vehicle_interface · gear_shift · turn_indicators · hazard_lights</span></div></div></div>
+<div class="nd-arrow">→</div>
+<div class="nd-col"><div class="nd-col-title">VEHICLE / HMI 车辆</div><div class="nd-col-body"><div class="nd-card info"><b>Vehicle</b><span>Steering · Throttle · Brake · Shift(Gear) · Turn Indicators · Hazard Lights</span></div><div class="nd-card keep"><b>HMI（Minimal）</b><span>Operation Mode · Autonomous/Manual · Emergency Stop</span></div><div class="nd-card remove"><b>External HMI（移除）</b><span>AD API Bridge · Web HMI（内部 operation_mode 状态仍保留于 System 层）</span></div></div></div>
+</div>
+<div class="nd-arrow-down">↓ /perception/objects（dynamic &amp; static）↑</div>
+<div class="nd-band">
+<div class="nd-band-title">PERCEPTION 感知（横跨全链路）</div>
+<div class="nd-band-body">
+<div class="nd-card keep"><b>Camera Perception</b><span>YOLO(2D) image_detector(YOLO) · Camera Tracking multi_object_tracker</span></div>
+<div class="nd-card keep"><b>LiDAR Perception</b><span>euclidean_cluster · lidar_centerpoint · LiDAR Tracking multi_object_tracker</span></div>
+<div class="nd-card remove"><b>Radar Perception（移除）</b><span>radar_object_detector · radar_tracker</span></div>
+<div class="nd-card keep"><b>Sensor Fusion</b><span>object_fusion · tracking_fusion</span></div>
+<div class="nd-card opt"><b>Prediction</b><span>map_based_prediction · motion_predictor</span></div>
+<div class="nd-card remove wide"><b>Traffic Light Recognition（移除）</b><span>map_based_detector · image_detector · classifier · occlusion_predictor · traffic_light_estimator · multi_camera_fusion · traffic_light_arbitrator · crosswalk_tl_estimator</span></div>
+</div></div>
+<div class="nd-grid-bottom">
+<div class="nd-card keep"><b>System 系统与安全</b><span>system_monitor{diagnostic_aggregator·hardware_monitor} · autoware_state_manager{state_manager·operation_mode_manager} · map_tf_generator{static_transform_publisher·tf_broadcaster}</span></div>
+<div class="nd-card remove"><b>Simulator（移除，仅开发机）</b><span>CARLA / LGSVL — simulator_bridge · sensor_simulator · vehicle_simulator</span></div>
+<div class="nd-card remove"><b>Evaluation（移除，仅开发机）</b><span>planning_evaluator · control_evaluator · perception_evaluator · scenario_evaluator</span></div>
+<div class="nd-card dev"><b>Logging / Debug（可选）</b><span>data_logger{rosbag2·log_manager} · visualization{rviz2·foxglove_bridge}</span></div>
+</div>
+
+    </div>
+
+    <div class="official-caption">
+      该图已把当前 AiLabCar Lite 明确移除的模块直接灰化，例如 Radar、Traffic Light、城市道路法规型 Planning 插件、Simulator、Evaluator 以及非必要外部 HMI。
+      像 NDT、Map、Mission / Behavior / Motion Planning 中需要“替换 / 精简”的部分，仍保留在主图结构中，以便后续结合 tag 1.71.2 的实际依赖闭包继续细化。
+    </div>
+
+    <div class="official-list">
+      <div class="x"><b>灰化：Radar / V2X / 外部 HMI</b><br/>若 AiLabCar 当前没有对应硬件或业务接口，则不进入比赛 Runtime。</div>
+      <div class="x"><b>灰化：Traffic Light / 城市规则链</b><br/>包括信号灯识别以及大量法规场景相关 Behavior / Velocity 模块。</div>
+      <div class="x"><b>灰化：Simulator / Evaluator</b><br/>仅保留在开发机或验证环境，控制器部署版不包含这些开发工具。</div>
+    </div>
+  </section>
+
+
+
+
+  
+  
+  <section id="package-structure">
+    <h2>Autoware 包结构与 AiLabCar Lite 映射</h2>
+    <div class="section-sub">
+      从“功能架构”进一步落到源码 workspace。Autoware 不是单一仓库，而是由 Core、Universe、Launcher、Sensor Component 等仓库共同组成；
+      其中真正需要重点裁剪的是 <code>autoware_universe</code> 内部各功能域，以及顶层 Launch / Sensor Component 的实际依赖。
+      <b>说明：</b>下列结构按 Autoware 官方 workspace 组织方式与当前公开仓库目录整理；最终裁剪时，以你本地 <b>tag 1.71.2</b> 的
+      <code>repositories/autoware.repos</code>、<code>src/</code> 与 <code>colcon list</code> 为最终准则。
+    </div>
+
+    <style>
+      .pkg-legend{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 18px}
+      .pkg-pill{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:11px;color:#4b5563}
+      .pkg-dot{width:9px;height:9px;border-radius:50%}
+      .pkg-overview{display:grid;grid-template-columns:1.05fr 1fr;gap:16px}
+      .pkg-tree-card,.pkg-logic-card{border:1px solid #d4dbe3;border-radius:14px;background:#f8f9fa;padding:17px}
+      .pkg-tree-card h3,.pkg-logic-card h3{font-size:14px;margin:0 0 12px;color:#344054}
+      .pkg-tree{font:11px/1.72 ui-monospace,SFMono-Regular,Menlo,monospace;color:#445164;white-space:pre-wrap;margin:0}
+      .pkg-tree .k{color:#267647;font-weight:700}
+      .pkg-tree .a{color:#a66b0c;font-weight:700}
+      .pkg-tree .r{color:#7b8491;font-weight:700}
+      .pkg-tree .d{color:#4c67b2;font-weight:700}
+      .pkg-logic-list{display:grid;gap:9px}
+      .pkg-logic-item{display:grid;grid-template-columns:112px 1fr;gap:10px;align-items:start;border:1px solid #dbe1e8;border-radius:10px;padding:10px;background:#fff}
+      .pkg-logic-item b{font-size:11px;color:#3e4a59}
+      .pkg-logic-item span{font-size:11px;color:#637082;line-height:1.55}
+      .pkg-table-wrap{margin-top:16px;border:1px solid #cfd6df;border-radius:14px;overflow:hidden;background:#fff}
+      .pkg-table{width:100%;border-collapse:collapse;font-size:11px}
+      .pkg-table thead th{background:#f7f8fa;color:#546171;padding:11px 10px;border-bottom:1px solid #d9e0e7;text-align:left}
+      .pkg-table tbody td{padding:12px 10px;border-bottom:1px solid #e2e6eb;vertical-align:top;color:#4f5b69;line-height:1.6}
+      .pkg-table tbody tr:last-child td{border-bottom:none}
+      .pkg-path{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#4d6079}
+      .pkg-tags{display:flex;gap:5px;flex-wrap:wrap}
+      .pkg-tag{display:inline-block;padding:3px 7px;border-radius:6px;border:1px solid #d8dee7;background:#f8fafc;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;color:#536173}
+      .pkg-status{display:inline-block;padding:4px 9px;border-radius:999px;font-size:10px;font-weight:800;white-space:nowrap;border:1.3px solid}
+      .ps-keep{background:#eaf7ef;border-color:#2f9d62;color:#237649}
+      .ps-adapt{background:#fff4e4;border-color:#ca8a22;color:#9b640d}
+      .ps-remove{background:#eef2f6;border-color:#8190a4;color:#617084}
+      .ps-dev{background:#edf3ff;border-color:#6484d3;color:#4e65ad}
+      .pkg-note{margin-top:13px;padding:11px 13px;border:1px dashed #c7d0da;border-radius:10px;background:#fafbfc;font-size:11px;color:#627080;line-height:1.65}
+      @media(max-width:980px){
+        .pkg-overview{grid-template-columns:1fr}
+        .pkg-table-wrap{overflow:auto}
+        .pkg-table{min-width:1050px}
+      }
+    </style>
+
+    <div class="pkg-legend">
+      <span class="pkg-pill"><span class="pkg-dot" style="background:#2f9d62"></span>保留</span>
+      <span class="pkg-pill"><span class="pkg-dot" style="background:#ca8a22"></span>替换 / 精简</span>
+      <span class="pkg-pill"><span class="pkg-dot" style="background:#8190a4"></span>Runtime 移除</span>
+      <span class="pkg-pill"><span class="pkg-dot" style="background:#6484d3"></span>仅开发 / 调试</span>
+    </div>
+
+    <div class="pkg-overview">
+      <div class="pkg-tree-card">
+        <h3>1. Autoware Workspace 仓库 / 目录树</h3>
+        <pre class="pkg-tree">autoware/
+└── src/
+    ├── core/
+    │   ├── <span class="k">autoware_msgs</span>
+    │   ├── <span class="r">autoware_adapi_msgs</span>
+    │   ├── <span class="k">autoware_internal_msgs</span>
+    │   ├── <span class="k">autoware_cmake</span>
+    │   ├── <span class="k">autoware_utils</span>
+    │   ├── <span class="k">autoware_lanelet2_extension</span>
+    │   └── <span class="k">autoware_core</span>
+    │
+    ├── universe/
+    │   ├── autoware_universe/
+    │   │   ├── <span class="k">common/</span>
+    │   │   ├── <span class="k">sensing/</span>
+    │   │   ├── <span class="a">localization/</span>
+    │   │   ├── <span class="a">map/</span>
+    │   │   ├── <span class="a">perception/</span>
+    │   │   ├── <span class="a">planning/</span>
+    │   │   ├── <span class="k">control/</span>
+    │   │   ├── <span class="k">vehicle/</span>
+    │   │   ├── <span class="a">system/</span>
+    │   │   ├── <span class="r">simulator/</span>
+    │   │   ├── <span class="r">evaluator/</span>
+    │   │   └── <span class="d">visualization/</span>
+    │   └── external/
+    │       └── <span class="a">仅按实际依赖保留</span>
+    │
+    ├── launcher/
+    │   └── <span class="a">autoware_launch → ailabcar_launch</span>
+    │
+    └── sensor_component/
+        ├── <span class="a">nebula / 通用传感器驱动</span>
+        ├── <span class="a">transport_drivers</span>
+        └── <span class="k">AiLabCar 实际 Camera / LiDAR / GNSS / CAN 驱动</span></pre>
+      </div>
+
+      <div class="pkg-logic-card">
+        <h3>2. AiLabCar Lite 的包级裁剪原则</h3>
+        <div class="pkg-logic-list">
+          <div class="pkg-logic-item"><b>Core</b><span>消息定义、CMake、Utils、Lanelet2 基础能力属于大量包的公共依赖，原则上不直接手工删除。</span></div>
+          <div class="pkg-logic-item"><b>Universe</b><span>主要算法区。Perception 与 Planning 内部必须做白名单化，是实际裁剪收益最大的目录。</span></div>
+          <div class="pkg-logic-item"><b>Launcher</b><span>完整 <code>autoware_launch</code> 不作为最终比赛入口；建立 <code>ailabcar_launch</code> 只组合需要的节点。</span></div>
+          <div class="pkg-logic-item"><b>Sensor</b><span>不要为了“完整兼容”编译全部传感器驱动；控制器只保留 AiLabCar 当前真实硬件相关包。</span></div>
+          <div class="pkg-logic-item"><b>External</b><span>不能按目录整删。通过 <code>--packages-up-to ailabcar_runtime</code> 让依赖闭包决定真正需要的第三方包。</span></div>
+          <div class="pkg-logic-item"><b>Dev Tools</b><span>Simulator、Evaluator、RViz/Visualization 可留开发机，但从比赛 Runtime 与启动链中移除。</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pkg-table-wrap">
+      <table class="pkg-table">
+        <thead>
+          <tr>
+            <th>功能目录</th>
+            <th>关键 Package 示例</th>
+            <th>AiLabCar Lite 决策</th>
+            <th>包级处理方式</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pkg-path">common/</span></td>
+            <td><div class="pkg-tags">
+              <span class="pkg-tag">autoware_universe_utils</span>
+              <span class="pkg-tag">autoware_component_interface_specs_universe</span>
+              <span class="pkg-tag">autoware_time_utils</span>
+            </div></td>
+            <td><span class="pkg-status ps-keep">保留基础依赖</span></td>
+            <td>公共库是很多上层包的隐式/直接依赖，不建议手工整目录裁掉；由依赖闭包自动选中。</td>
+          </tr>
+
+          <tr>
+            <td><span class="pkg-path">sensing/</span></td>
+            <td><div class="pkg-tags">
+              <span class="pkg-tag">autoware_pointcloud_preprocessor</span>
+              <span class="pkg-tag">autoware_imu_corrector</span>
+              <span class="pkg-tag">autoware_cuda_pointcloud_preprocessor</span>
+              <span class="pkg-tag">radar_*</span>
+            </div></td>
+            <td><span class="pkg-status ps-adapt">白名单保留</span></td>
+            <td>保留 LiDAR/IMU/Camera 需要的预处理与驱动；Radar 相关包在无硬件时退出 Runtime。</td>
+          </tr>
+
+          <tr>
+            <td><span class="pkg-path">localization/</span></td>
+            <td><div class="pkg-tags">
+              <span class="pkg-tag">autoware_pose2twist</span>
+              <span class="pkg-tag">autoware_pose_estimator_arbiter</span>
+              <span class="pkg-tag">autoware_localization_error_monitor</span>
+              <span class="pkg-tag">yabloc</span>
+            </div></td>
+            <td><span class="pkg-status ps-adapt">替换 / 轻量化</span></td>
+            <td>目标不是删除 Localization，而是把它收缩成 GNSS/IMU/轮速提供的 ego pose、velocity、yaw 与 TF 契约。</td>
+          </tr>
+
+          <tr>
+            <td><span class="pkg-path">map/</span></td>
+            <td><div class="pkg-tags">
+              <span class="pkg-tag">autoware_map_tf_generator</span>
+              <span class="pkg-tag">map utilities</span>
+              <span class="pkg-tag">Lanelet2 extension (Core)</span>
+            </div></td>
+            <td><span class="pkg-status ps-adapt">替换输入</span></td>
+            <td>从“预制 HD Map / PCD”为中心，转为 AiLabCar 实时生成的 Lanelet2 / 局部地图，同时保留规划所需地图接口。</td>
+          </tr>
+
+          <tr>
+            <td><span class="pkg-path">perception/</span></td>
+            <td><div class="pkg-tags">
+              <span class="pkg-tag">autoware_euclidean_cluster</span>
+              <span class="pkg-tag">autoware_multi_object_tracker</span>
+              <span class="pkg-tag">autoware_map_based_prediction</span>
+              <span class="pkg-tag">autoware_traffic_light_*</span>
+              <span class="pkg-tag">autoware_radar_*</span>
+            </div></td>
+            <td><span class="pkg-status ps-adapt">重点裁剪</span></td>
+            <td>保留 YOLO/LiDAR 检测、必要融合/跟踪；Traffic Light 与 Radar 全链删除；Prediction 按赛道需求简化。</td>
+          </tr>
+
+          <tr>
+            <td><span class="pkg-path">planning/</span></td>
+            <td><div class="pkg-tags">
+              <span class="pkg-tag">autoware_mission_planner_universe</span>
+              <span class="pkg-tag">behavior_path_planner</span>
+              <span class="pkg-tag">behavior_velocity_planner</span>
+              <span class="pkg-tag">motion_velocity_planner</span>
+              <span class="pkg-tag">autoware_trajectory_validator</span>
+            </div></td>
+            <td><span class="pkg-status ps-adapt">最大裁剪区</span></td>
+            <td>保留 Route/Lane Follow/Obstacle Stop-Slow/Trajectory/Smoother；裁掉城市法规、停车、换道等无赛制需求插件。</td>
+          </tr>
+
+          <tr>
+            <td><span class="pkg-path">control/</span></td>
+            <td><div class="pkg-tags">
+              <span class="pkg-tag">autoware_trajectory_follower_node</span>
+              <span class="pkg-tag">autoware_mpc_lateral_controller</span>
+              <span class="pkg-tag">autoware_pid_longitudinal_controller</span>
+              <span class="pkg-tag">autoware_control_validator</span>
+              <span class="pkg-tag">autoware_vehicle_cmd_gate</span>
+            </div></td>
+            <td><span class="pkg-status ps-keep">核心保留</span></td>
+            <td>控制链本身体量相对有限、接口稳定，优先保持；你自己的 PID/LQR 等算法可以在此层替换或集成。</td>
+          </tr>
+
+          <tr>
+            <td><span class="pkg-path">vehicle/</span></td>
+            <td><div class="pkg-tags">
+              <span class="pkg-tag">autoware_raw_vehicle_cmd_converter</span>
+              <span class="pkg-tag">autoware_external_cmd_converter</span>
+              <span class="pkg-tag">AiLabCar CAN driver</span>
+            </div></td>
+            <td><span class="pkg-status ps-keep">保留实际接口</span></td>
+            <td>只保留 AiLabCar 车辆协议真正需要的转换器和自定义 CAN 接口，不携带其他车型适配。</td>
+          </tr>
+
+          <tr>
+            <td><span class="pkg-path">system/</span></td>
+            <td><div class="pkg-tags">
+              <span class="pkg-tag">autoware_diagnostic_graph_aggregator</span>
+              <span class="pkg-tag">autoware_mrm_handler</span>
+              <span class="pkg-tag">autoware_system_monitor</span>
+              <span class="pkg-tag">autoware_default_adapi_*</span>
+            </div></td>
+            <td><span class="pkg-status ps-adapt">安全保留 / API 精简</span></td>
+            <td>保留最小诊断、MRM、Operation Mode；<code>autoware_default_adapi_*</code> 仅保留内部 operation_mode / routing 状态接口，供 System 与 Bringup 内部使用，不代表对外 API/HMI Bridge 保留——外部 AD API Bridge、复杂监视器与业务接口仍按实际需求删除（与下方节点图 “External HMI（移除）” 一致）。</td>
+          </tr>
+
+          <tr>
+            <td><span class="pkg-path">simulator/</span></td>
+            <td><div class="pkg-tags">
+              <span class="pkg-tag">autoware_carla_interface</span>
+              <span class="pkg-tag">autoware_dummy_diag_publisher</span>
+              <span class="pkg-tag">autoware_dummy_traffic_light_publisher</span>
+            </div></td>
+            <td><span class="pkg-status ps-remove">实车 Runtime 移除</span></td>
+            <td>开发机 / SIL / HIL 可保留，但最终控制器不编译、不部署、不启动。</td>
+          </tr>
+
+          <tr>
+            <td><span class="pkg-path">evaluator/</span></td>
+            <td><div class="pkg-tags">
+              <span class="pkg-tag">autoware_control_evaluator</span>
+              <span class="pkg-tag">autoware_planning_evaluator</span>
+              <span class="pkg-tag">autoware_perception_online_evaluator</span>
+            </div></td>
+            <td><span class="pkg-status ps-remove">Runtime 移除</span></td>
+            <td>属于验证/分析工具，不应成为比赛闭环运行依赖。</td>
+          </tr>
+
+          <tr>
+            <td><span class="pkg-path">visualization/</span></td>
+            <td><div class="pkg-tags">
+              <span class="pkg-tag">tier4_*_rviz_plugin</span>
+              <span class="pkg-tag">autoware_*_rviz_plugin</span>
+            </div></td>
+            <td><span class="pkg-status ps-dev">仅 Debug</span></td>
+            <td>保留在 PC 或 <code>ailabcar_debug.launch</code>，比赛正常运行不启动。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pkg-note">
+      <b>真正实施时不要按上表直接 <code>rm -rf</code>。</b>
+      第一步用 <code>ailabcar_launch</code> 缩小运行节点；第二步建立 <code>ailabcar_runtime</code> meta-package；
+      第三步执行 <code>colcon list --packages-up-to ailabcar_runtime --names-only</code> 得到 package 依赖白名单，
+      最后才决定哪些源码仓库/目录无需进入 Lite Workspace。
+    </div>
+  </section>
+
+  <section id="source-architecture">
+    <h2>裁剪完成后的源码模块化架构</h2>
+    <div class="section-sub">
+      该结构是 <b>Minimal Stable Autoware</b> 经过逐批裁剪、编译与功能回归后进入源码重构阶段的最终目标形态。
+      源码以 Autoware 保留下来的功能为基础重新按 AiLabCar 功能域组织：<b>一个统一的 config 配置中心 + 各功能模块独立目录 + Bringup/Runtime 独立管理</b>。
+      目标是让工程人员进入仓库后可以直接定位“参数在哪里、感知在哪里、定位在哪里、地图在哪里、规划在哪里、控制在哪里、CAN 在哪里、安全在哪里”。
+    </div>
+
+    <style>
+      .finalsrc-legend{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 18px}
+      .finalsrc-pill{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:11px;color:#4b5563}
+      .finalsrc-dot{width:9px;height:9px;border-radius:50%}
+      .finalsrc-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}
+      .finalsrc-card{border:1px solid #d6dde6;border-radius:14px;background:#fbfcfd;padding:16px}
+      .finalsrc-card h3{margin:0 0 11px;font-size:14px;color:#344054}
+      .finalsrc-tree{margin:0;background:#f7f8fa;border:1px solid #d9dfe7;border-radius:10px;padding:14px;font:10.7px/1.58 ui-monospace,SFMono-Regular,Menlo,monospace;color:#42516a;white-space:pre-wrap}
+      .finalsrc-config{color:#6b54b5;font-weight:800}
+      .finalsrc-domain{color:#2e7d55;font-weight:800}
+      .finalsrc-infra{color:#4d6fae;font-weight:800}
+      .finalsrc-dev{color:#9a6a12;font-weight:800}
+      .finalsrc-table-wrap{margin-top:16px;border:1px solid #d5dce5;border-radius:12px;overflow:hidden;background:#fff}
+      .finalsrc-table{width:100%;border-collapse:collapse;font-size:11px}
+      .finalsrc-table th{background:#f7f8fa;color:#536171;padding:10px 9px;border-bottom:1px solid #d7dee7;text-align:left}
+      .finalsrc-table td{padding:10px 9px;border-bottom:1px solid #e1e6ec;vertical-align:top;color:#4f5b69;line-height:1.55}
+      .finalsrc-table tr:last-child td{border-bottom:none}
+      .finalsrc-path{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#455d7a;font-weight:700}
+      .finalsrc-module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
+      .finalsrc-module{border:1px solid #dbe1e8;border-radius:12px;background:#fff;padding:13px}
+      .finalsrc-module h4{margin:0 0 8px;font-size:12px;color:#344054}
+      .finalsrc-module pre{margin:0;background:#f8f9fb;font-size:10px;line-height:1.55}
+      .finalsrc-module p{font-size:10.5px;line-height:1.6;color:#667385;margin:8px 0 0}
+      .finalsrc-note{margin-top:13px;padding:11px 13px;border:1px dashed #c7d0da;border-radius:10px;background:#fafbfc;font-size:11px;color:#627080;line-height:1.65}
+      .finalsrc-flow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:12px}
+      .finalsrc-flow-box{padding:8px 11px;border-radius:8px;border:1.4px solid #7c8899;background:#fff;font-size:10.5px;font-weight:800;color:#435066}
+      .finalsrc-flow-box.primary{border-color:#2f9d62;background:#eaf7ef;color:#237649}
+      .finalsrc-flow-box.config{border-color:#8b7ee0;background:#f3f0ff;color:#6657a4}
+      .finalsrc-arrow{font-size:16px;color:#8793a3}
+      @media(max-width:980px){
+        .finalsrc-grid,.finalsrc-module-grid{grid-template-columns:1fr}
+        .finalsrc-table-wrap{overflow:auto}
+        .finalsrc-table{min-width:1000px}
+      }
+    </style>
+
+    <div class="finalsrc-legend">
+      <span class="finalsrc-pill"><span class="finalsrc-dot" style="background:#8b7ee0"></span>Config：全系统统一配置中心</span>
+      <span class="finalsrc-pill"><span class="finalsrc-dot" style="background:#2f9d62"></span>Core Domains：Sensing / Perception / Localization / Mapping / Planning / Control / Vehicle / System</span>
+      <span class="finalsrc-pill"><span class="finalsrc-dot" style="background:#4e79d8"></span>Infrastructure：Common / Interfaces / Bringup / Runtime</span>
+      <span class="finalsrc-pill"><span class="finalsrc-dot" style="background:#c99316"></span>Support：Drivers / Third Party / Tools / Scripts / Docs</span>
+    </div>
+
+    <div class="finalsrc-grid">
+      <div class="finalsrc-card">
+        <h3>1. 最终源码顶层结构</h3>
+        <pre class="finalsrc-tree">Autoware_AiLabCar_Lite/
+│
+├── <span class="finalsrc-config">config/</span>                  # 全系统统一配置中心
+│
+├── <span class="finalsrc-domain">sensing/</span>                 # 传感器数据与预处理
+├── <span class="finalsrc-domain">perception/</span>              # YOLO / LiDAR / Fusion / Tracking / Boundary
+├── <span class="finalsrc-domain">localization/</span>            # GNSS / IMU / EKF / Pose / Twist / TF
+├── <span class="finalsrc-domain">mapping/</span>                 # Realtime Mapping / Lanelet2 / Map Freeze
+├── <span class="finalsrc-domain">planning/</span>                # Mission / Route / Behavior / Motion / Trajectory
+├── <span class="finalsrc-domain">control/</span>                 # PID / LQR / MPC / Follower / Validator / Gate
+├── <span class="finalsrc-domain">vehicle/</span>                 # CAN / Vehicle Interface / State / Command
+├── <span class="finalsrc-domain">system/</span>                  # Mode / Health / Fault / MRM / Watchdog
+│
+├── <span class="finalsrc-dev">drivers/</span>                 # RSEMX / Camera / GNSS-IMU / CAN 硬件驱动
+├── <span class="finalsrc-infra">common/</span>                  # Math / Geometry / ROS Utils / 公共库
+├── <span class="finalsrc-infra">interfaces/</span>              # 必要的 msg / srv / action
+├── <span class="finalsrc-infra">bringup/</span>                 # Launch 与系统组合
+├── <span class="finalsrc-infra">runtime/</span>                 # Lite Runtime Meta-package / Manifest
+│
+├── <span class="finalsrc-dev">third_party/</span>             # 必须源码编译的第三方依赖
+├── <span class="finalsrc-dev">tools/</span>                   # 开发 / Benchmark / 诊断 / 数据检查
+├── <span class="finalsrc-dev">scripts/</span>                 # Build / Test / Export / Deploy 脚本
+├── <span class="finalsrc-dev">docs/</span>                    # 架构、裁剪、修改与验证记录
+│
+└── README.md</pre>
+
+        <div class="finalsrc-note">
+          <b>源码来源原则：</b>这些模块中的主体代码来自裁剪后仍保留的 Autoware 源码及 AiLabCar 已完成的修改。
+          当前阶段仍坚持“先裁剪、边裁边测、得到 Minimal Stable 后再重构”；这里定义的是最终重构结果，不要求现在立即移动源码。
+        </div>
+      </div>
+
+      <div class="finalsrc-card">
+        <h3>2. 统一配置中心 config/</h3>
+        <pre class="finalsrc-tree"><span class="finalsrc-config">config/</span>
+├── common/
+│   ├── vehicle_info.yaml
+│   ├── frames.yaml
+│   ├── qos.yaml
+│   ├── topic_remap.yaml
+│   └── system.yaml
+│
+├── sensing/
+│   ├── lidar.yaml
+│   ├── camera.yaml
+│   ├── gnss.yaml
+│   ├── imu.yaml
+│   ├── pointcloud_preprocessor.yaml
+│   └── time_sync.yaml
+│
+├── perception/
+│   ├── yolo.yaml
+│   ├── lidar_detection.yaml
+│   ├── clustering.yaml
+│   ├── fusion.yaml
+│   ├── tracking.yaml
+│   └── boundary_detection.yaml
+│
+├── localization/
+│   ├── ekf.yaml
+│   ├── gnss_imu.yaml
+│   ├── localization_monitor.yaml
+│   └── map_origin.yaml
+│
+├── mapping/
+│   ├── realtime_mapping.yaml
+│   ├── lanelet_generator.yaml
+│   ├── map_validation.yaml
+│   └── map_freeze.yaml
+│
+├── planning/
+│   ├── mission.yaml
+│   ├── route.yaml
+│   ├── behavior_path.yaml
+│   ├── behavior_velocity.yaml
+│   ├── motion.yaml
+│   ├── velocity_smoother.yaml
+│   └── trajectory_validator.yaml
+│
+├── control/
+│   ├── pid_longitudinal.yaml
+│   ├── lqr_lateral.yaml
+│   ├── mpc_lateral.yaml
+│   ├── control_limits.yaml
+│   ├── control_validator.yaml
+│   └── vehicle_cmd_gate.yaml
+│
+├── vehicle/
+│   ├── can.yaml
+│   ├── steering.yaml
+│   ├── throttle.yaml
+│   ├── brake.yaml
+│   └── gear.yaml
+│
+├── system/
+│   ├── health.yaml
+│   ├── timeout.yaml
+│   ├── fault_policy.yaml
+│   ├── mrm.yaml
+│   └── operation_mode.yaml
+│
+└── profiles/
+    ├── mapping.yaml
+    ├── autonomous.yaml
+    ├── debug.yaml
+    └── competition.yaml</pre>
+        <div class="finalsrc-note">
+          <b>原则：</b>运行参数统一从 <code>config/</code> 管理，避免 YAML 散落在各算法 package 内。
+          Launch 只负责引用配置，不承载大量参数；算法代码也不硬编码可调参数。
+        </div>
+      </div>
+    </div>
+
+    <div class="finalsrc-table-wrap">
+      <table class="finalsrc-table">
+        <thead>
+          <tr>
+            <th>一级目录</th>
+            <th>主要职责</th>
+            <th>主要内容</th>
+            <th>边界 / 不应包含</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="finalsrc-path">config/</td><td>全系统统一参数中心</td><td>YAML、QoS、车辆参数、模块开关、Profiles</td><td>不放算法源码</td></tr>
+          <tr><td class="finalsrc-path">sensing/</td><td>传感器数据标准化与预处理</td><td>PointCloud、Camera、GNSS/IMU、同步、监控</td><td>不放 YOLO、规划、CAN 业务逻辑</td></tr>
+          <tr><td class="finalsrc-path">perception/</td><td>环境感知</td><td>YOLO、LiDAR 检测/聚类、Fusion、Tracking、Boundary</td><td>不放控制算法</td></tr>
+          <tr><td class="finalsrc-path">localization/</td><td>车辆状态估计</td><td>GNSS/IMU、EKF、Pose、Twist、TF、Monitor</td><td>不放 Route / Planning 逻辑</td></tr>
+          <tr><td class="finalsrc-path">mapping/</td><td>实时地图生命周期</td><td>Boundary Mapper、Lanelet Generator、Validator、Freeze、Manager</td><td>不放 PID / LQR</td></tr>
+          <tr><td class="finalsrc-path">planning/</td><td>路径与速度规划</td><td>Mission、Route、Behavior、Motion、Velocity、Trajectory Validation</td><td>不放 CAN 和硬件 SDK</td></tr>
+          <tr><td class="finalsrc-path">control/</td><td>横纵向控制与轨迹跟踪</td><td>PID、LQR、MPC、Trajectory Follower、Validator、Command Gate</td><td>不直接解析 CAN 报文</td></tr>
+          <tr><td class="finalsrc-path">vehicle/</td><td>车辆接口</td><td>CAN、Command Converter、Vehicle State、Steer/Throttle/Brake/Gear</td><td>不放 Planning / Perception 算法</td></tr>
+          <tr><td class="finalsrc-path">system/</td><td>整车系统安全与状态管理</td><td>Mode、Health、Fault、MRM、Diagnostics、Watchdog</td><td>不实现具体感知/规划算法</td></tr>
+          <tr><td class="finalsrc-path">drivers/</td><td>真实硬件驱动</td><td>RSEMX、Hikrobot Camera、GNSS/IMU、CAN Driver</td><td>上层算法只消费标准 ROS 消息</td></tr>
+          <tr><td class="finalsrc-path">common/</td><td>公共能力</td><td>Math、Geometry、ROS Utils、通用数据处理</td><td>避免放具体业务算法</td></tr>
+          <tr><td class="finalsrc-path">interfaces/</td><td>项目特有接口</td><td>必要的 msg / srv / action</td><td>能复用 Autoware/ROS 标准消息时不重复定义</td></tr>
+          <tr><td class="finalsrc-path">bringup/</td><td>系统启动与组合</td><td>子系统 Launch、Mapping / Autonomous / Debug 入口</td><td>不写算法实现</td></tr>
+          <tr><td class="finalsrc-path">runtime/</td><td>Lite Runtime 定义</td><td>Meta-package、Manifest、Dependency Whitelist</td><td>不放算法实现</td></tr>
+          <tr><td class="finalsrc-path">third_party/</td><td>第三方源码依赖</td><td>确实需要源码编译的外部库</td><td>不混入 AiLabCar 业务代码</td></tr>
+          <tr><td class="finalsrc-path">tools/</td><td>开发与验证</td><td>Benchmark、Diagnostics、Data Checker、Test Tools</td><td>不作为比赛 Runtime 必需依赖</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="finalsrc-module-grid">
+      <div class="finalsrc-module">
+        <h4>Sensing</h4>
+        <pre>sensing/
+├── pointcloud/
+├── camera/
+├── imu/
+├── gnss/
+├── synchronization/
+└── monitoring/</pre>
+        <p>承接裁剪后保留的 Autoware 传感器预处理与 AiLabCar 实际传感器数据标准化逻辑。</p>
+      </div>
+
+      <div class="finalsrc-module">
+        <h4>Perception</h4>
+        <pre>perception/
+├── camera/yolo_detector/
+├── lidar/
+├── fusion/
+├── tracking/
+├── prediction/
+└── boundary/</pre>
+        <p>最终不再保留比赛无关的 Radar / Traffic Light 目录；只组织真实需要的感知链。</p>
+      </div>
+
+      <div class="finalsrc-module">
+        <h4>Localization</h4>
+        <pre>localization/
+├── gnss/
+├── imu/
+├── fusion/
+├── pose/
+├── twist/
+├── tf/
+└── monitoring/</pre>
+        <p>统一输出 ego pose / velocity / yaw，并维持 <code>map → odom → base_link</code>。</p>
+      </div>
+
+      <div class="finalsrc-module">
+        <h4>Mapping</h4>
+        <pre>mapping/
+├── boundary_mapper/
+├── lanelet_generator/
+├── map_projection/
+├── map_validator/
+├── map_freezer/
+├── map_manager/
+└── map_io/</pre>
+        <p>负责实时地图从边界输入到 Lanelet2 生成、验证、冻结、版本与 I/O 的完整生命周期。</p>
+      </div>
+
+      <div class="finalsrc-module">
+        <h4>Planning</h4>
+        <pre>planning/
+├── mission/
+├── route/
+├── behavior/
+├── motion/
+├── velocity/
+└── validation/</pre>
+        <p>只保留比赛所需 Mission / Route / Behavior / Motion / Velocity / Trajectory 功能。</p>
+      </div>
+
+      <div class="finalsrc-module">
+        <h4>Control</h4>
+        <pre>control/
+├── lateral/
+│   ├── lqr/
+│   └── mpc/
+├── longitudinal/
+│   └── pid/
+├── trajectory_follower/
+├── validator/
+├── command_gate/
+└── monitoring/</pre>
+        <p>把横向、纵向、轨迹跟踪、Validator、Gate 和监控边界清晰分开。</p>
+      </div>
+
+      <div class="finalsrc-module">
+        <h4>Vehicle</h4>
+        <pre>vehicle/
+├── interface/
+├── command/
+│   ├── steering/
+│   ├── throttle/
+│   ├── brake/
+│   └── gear/
+├── state/
+├── can/
+└── monitoring/</pre>
+        <p>形成 Control Command → CAN → Race Car 与 Vehicle State → ROS 的双向车辆接口链。</p>
+      </div>
+
+      <div class="finalsrc-module">
+        <h4>System</h4>
+        <pre>system/
+├── mode_manager/
+├── health_manager/
+├── fault_manager/
+├── mrm_manager/
+├── diagnostics/
+└── watchdog/</pre>
+        <p>统一接收 Sensor / Localization / Map / Planning / Control / CAN 健康状态并实施安全策略。</p>
+      </div>
+
+      <div class="finalsrc-module">
+        <h4>Bringup</h4>
+        <pre>bringup/
+└── ailabcar_bringup/
+    └── launch/
+        ├── sensors.launch.xml
+        ├── perception.launch.xml
+        ├── localization.launch.xml
+        ├── mapping.launch.xml
+        ├── planning.launch.xml
+        ├── control.launch.xml
+        ├── vehicle.launch.xml
+        ├── system.launch.xml
+        ├── ailabcar_mapping.launch.xml
+        ├── ailabcar_autonomous.launch.xml
+        └── ailabcar_debug.launch.xml</pre>
+        <p>Bringup 只做模块组合与模式入口；配置统一从根目录 <code>config/</code> 引用。</p>
+      </div>
+
+      <div class="finalsrc-module">
+        <h4>Runtime</h4>
+        <pre>runtime/
+├── ailabcar_runtime/
+├── manifests/
+└── dependency_whitelist/</pre>
+        <p>负责 Lite Runtime 的 Meta-package、版本清单和依赖白名单，不实现具体算法。</p>
+      </div>
+    </div>
+
+    <div class="finalsrc-note">
+      <b>重构时机：</b>该目录结构属于裁剪完成后的最终工程形态。当前执行阶段仍保持完整 Autoware 目录进行渐进式减法：
+      <code>Full Autoware → 分批裁剪 → 每批 Build/Launch/Test → Minimal Stable → 冻结最终 Package Set → 按本结构重构</code>。
+      这样最终目录中的每一个模块都有真实运行需求和裁剪实验作为依据，而不是提前凭经验猜测。
+    </div>
+
+    <div class="finalsrc-flow">
+      <span class="finalsrc-flow-box">Full Autoware</span>
+      <span class="finalsrc-arrow">→</span>
+      <span class="finalsrc-flow-box">Incremental Trimming</span>
+      <span class="finalsrc-arrow">→</span>
+      <span class="finalsrc-flow-box">Minimal Stable</span>
+      <span class="finalsrc-arrow">→</span>
+      <span class="finalsrc-flow-box primary">Module Refactor</span>
+      <span class="finalsrc-arrow">→</span>
+      <span class="finalsrc-flow-box config">Unified Config</span>
+      <span class="finalsrc-arrow">→</span>
+      <span class="finalsrc-flow-box primary">AiLabCar Lite</span>
+    </div>
+  </section>
+
+
+
+
+
+
+  <section id="dependency">
+    <h2>Package 依赖关系与白名单生成</h2>
+    <div class="section-sub">
+      包结构告诉我们“源码在哪里”，依赖关系告诉我们“真正必须带什么”。AiLabCar Lite 不采用人工猜依赖，而是由顶层运行包反向生成依赖闭包。
+    </div>
+    <div class="eng-grid2">
+      <div class="eng-box">
+        <div class="eng-title">目标依赖链</div>
+        <div class="state-flow">
+          <span class="state-box keep">ailabcar_runtime</span><span class="state-arrow">→</span>
+          <span class="state-box">ailabcar_launch</span><span class="state-arrow">→</span>
+          <span class="state-box">功能 Packages</span><span class="state-arrow">→</span>
+          <span class="state-box warn">Indirect Dependencies</span>
+        </div>
+        <div class="eng-note">只有进入该依赖闭包的 package 才是 Lite Workspace 的候选保留项。未进入闭包的包不应因为“可能有用”而继续默认编译。</div>
+      </div>
+      <div class="eng-box">
+        <div class="eng-title">建议自动生成</div>
+        <pre class="deploy-tree">colcon list \
+  --packages-up-to ailabcar_runtime \
+  --names-only \
+  > ailabcar_packages.txt
+
+colcon graph \
+  --packages-up-to ailabcar_runtime \
+  --dot > ailabcar_dependency.dot
+
+dot -Tsvg ailabcar_dependency.dot \
+  -o ailabcar_dependency.svg</pre>
+      </div>
+    </div>
+    <div class="eng-note"><b>tag 1.71.2 实施规则：</b>网页中的 package 示例用于规划；最终白名单必须从你本机 tag 1.71.2 workspace 实际生成，并作为后续删包、CI 和部署的唯一依据。</div>
+  </section>
+
+
+  <section id="contracts">
+    <h2>AiLabCar 核心接口契约</h2>
+    <div class="section-sub">
+      裁剪和替换节点时，优先保证 Topic、Message、TF、QoS、频率和时间戳契约不变。只要接口稳定，上游算法可以更换而不迫使下游整体重构。
+    </div>
+    <div class="contract-table-wrap">
+      <table class="contract-table">
+        <thead><tr><th>链路</th><th>核心接口 / 数据</th><th>下游</th><th>必须保证</th><th>验收方法</th></tr></thead>
+        <tbody>
+          <tr><td>LiDAR → Perception/Mapping</td><td class="eng-code">sensor_msgs/PointCloud2</td><td>点云预处理、边界提取</td><td>frame_id、时间戳、频率、点字段一致</td><td>topic hz / echo / TF 可用</td></tr>
+          <tr><td>Camera → YOLO</td><td class="eng-code">Image + CameraInfo</td><td>YOLO detector</td><td>分辨率、编码、时间戳、相机内参</td><td>检测回调无丢帧、时间同步正确</td></tr>
+          <tr><td>Localization → Planning/Control</td><td class="eng-code">/localization/kinematic_state</td><td>规划、控制</td><td>pose、velocity、yaw 连续且不过期</td><td>stale timeout + 轨迹跟踪回归</td></tr>
+          <tr><td>TF</td><td class="eng-code">map → odom → base_link</td><td>全系统</td><td>唯一、连续、无跳变，无重复发布冲突</td><td>view_frames + tf_echo</td></tr>
+          <tr><td>Mapper → Planning</td><td>Lanelet2 / 局部地图</td><td>Route / Planner</td><td>坐标原点、版本、车道几何可追溯</td><td>map_valid + route generation</td></tr>
+          <tr><td>Planning → Control</td><td class="eng-code">/planning/trajectory</td><td>Trajectory Follower</td><td>轨迹点、速度、时间连续；超时可检测</td><td>validator + timeout test</td></tr>
+          <tr><td>Control → Gate</td><td class="eng-code">control_cmd</td><td>Command Gate</td><td>横纵向命令边界、更新周期、失效保护</td><td>限幅 / timeout / emergency test</td></tr>
+          <tr><td>Gate → Vehicle</td><td>Vehicle command / CAN</td><td>VCU</td><td>协议、计数器、周期、故障码、安全状态</td><td>CAN 回环 + 实车低速测试</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+<section id="slim">
+    <h2>模块裁剪清单</h2>
+    <div class="section-sub">逐模块列出关键包名、决策和理由，可以直接当作 workspace 裁剪时的对照表。</div>
+
+    <style>
+      .trim-table-wrap{
+        border:1px solid #cfd6df;border-radius:14px;overflow:hidden;background:#fbfbfa
+      }
+      .trim-table{
+        width:100%;border-collapse:collapse;font-size:12px
+      }
+      .trim-table thead th{
+        background:#f8f9fb;color:#55606e;font-size:11px;font-weight:700;
+        padding:13px 12px;border-bottom:1px solid #d9e0e7;text-align:left
+      }
+      .trim-table tbody td{
+        padding:14px 12px;border-bottom:1px solid #dfe5eb;vertical-align:top;
+        color:#4d5968;line-height:1.72
+      }
+      .trim-table tbody tr:last-child td{border-bottom:none}
+      .trim-col-layer{width:180px;color:#2f3a47;font-weight:500}
+      .trim-col-pkg{width:310px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#5a6a7c}
+      .decision-pill{
+        display:inline-block;padding:5px 12px;border-radius:999px;font-size:11px;font-weight:800;
+        border:1.5px solid
+      }
+      .decision-keep{background:#eaf7ef;border-color:#2f9d62;color:#237649}
+      .decision-replace{background:#fff4e4;border-color:#ca8a22;color:#a76a0a}
+      .decision-mix{background:#fff4e4;border-color:#ca8a22;color:#a76a0a}
+      .decision-remove{background:#eef2f6;border-color:#8091a7;color:#59697d}
+      .trim-note{
+        margin-top:14px;text-align:center;font-size:12px;color:#6b7280
+      }
+      @media(max-width:920px){
+        .trim-table-wrap{overflow:auto}
+        .trim-table{min-width:960px}
+      }
+    </style>
+
+    <div class="trim-table-wrap">
+      <table class="trim-table">
+        <thead>
+          <tr>
+            <th>层级</th>
+            <th>关键包</th>
+            <th>决策</th>
+            <th>理由</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="trim-col-layer">感知输入 Sensing</td>
+            <td class="trim-col-pkg">pointcloud_preprocessor，LiDAR / camera driver，GNSS / IMU driver</td>
+            <td><span class="decision-pill decision-keep">保留</span></td>
+            <td>与建图/规划方式无关，直接复用现有驱动与点云预处理链路；也是 YOLO + LiDAR 感知链的输入基础。</td>
+          </tr>
+          <tr>
+            <td class="trim-col-layer">定位 Localization</td>
+            <td class="trim-col-pkg">ndt_scan_matcher，ekf_localizer，pose / twist estimator</td>
+            <td><span class="decision-pill decision-replace">替换</span></td>
+            <td>用实时建图 / 轻量定位 / GNSS-IMU 状态估计替代 NDT 对点云地图的强依赖；<code>ekf_localizer</code> 可保留，但输入源改成适合 AiLabCar 的定位来源。</td>
+          </tr>
+          <tr>
+            <td class="trim-col-layer">地图 Map</td>
+            <td class="trim-col-pkg">map_loader（pointcloud map + Lanelet2）</td>
+            <td><span class="decision-pill decision-mix">替换 / 精简</span></td>
+            <td>没有预制主车道语义地图时，退化为实时局部地图 / 简化 Lanelet2；如果赛事允许，也可以离线生成一份轻量先验地图。</td>
+          </tr>
+          <tr>
+            <td class="trim-col-layer">感知-检测</td>
+            <td class="trim-col-pkg">tensorrt_yolo*，lidar detection / clustering，roi_cluster_fusion</td>
+            <td><span class="decision-pill decision-keep">保留</span></td>
+            <td>你当前已采用 YOLO + LiDAR 作为主要感知思路，这一层与默认 Autoware 检测链兼容度高，可以直接复用或做局部适配。</td>
+          </tr>
+          <tr>
+            <td class="trim-col-layer">感知-跟踪</td>
+            <td class="trim-col-pkg">multi_object_tracker</td>
+            <td><span class="decision-pill decision-keep">保留</span></td>
+            <td>多目标跟踪算法本身不强依赖完整 Lanelet2 语义地图，对比赛场景仍然有直接价值。</td>
+          </tr>
+          <tr>
+            <td class="trim-col-layer">感知-预测</td>
+            <td class="trim-col-pkg">map_based_prediction</td>
+            <td><span class="decision-pill decision-replace">替换</span></td>
+            <td>默认实现通常依赖 Lanelet2 拓扑与城市道路语义；在无复杂道路语义时，建议替换成运动学外推或轻量多假设预测。</td>
+          </tr>
+          <tr>
+            <td class="trim-col-layer">规划-任务</td>
+            <td class="trim-col-pkg">mission_planner</td>
+            <td><span class="decision-pill decision-replace">替换</span></td>
+            <td>比赛更适合目标点 / 局部路径驱动，而不是面向城市车道网络的全局 route 规划。</td>
+          </tr>
+          <tr>
+            <td class="trim-col-layer">规划-行为</td>
+            <td class="trim-col-pkg">behavior_path_planner，behavior_velocity_planner</td>
+            <td><span class="decision-pill decision-mix">大幅精简</span></td>
+            <td>其中大量模块（红绿灯、停止线、路口、人行横道等）属于法规场景，是裁剪量最大的部分；建议只保留赛道必需的轻量行为层。</td>
+          </tr>
+          <tr>
+            <td class="trim-col-layer">规划-运动</td>
+            <td class="trim-col-pkg">obstacle_avoidance_planner，motion_velocity_smoother，trajectory tools</td>
+            <td><span class="decision-pill decision-mix">保留算法 / 换输入</span></td>
+            <td>核心运动规划与速度平滑算法仍可复用，但输入参考路径与障碍表达需改为 AiLabCar 的局部地图和规划接口。</td>
+          </tr>
+          <tr>
+            <td class="trim-col-layer">控制 Control</td>
+            <td class="trim-col-pkg">autoware_trajectory_follower_node，autoware_mpc_lateral_controller / autoware_pid_longitudinal_controller，autoware_vehicle_cmd_gate</td>
+            <td><span class="decision-pill decision-keep">保留</span></td>
+            <td>只要上游按轨迹接口输出，控制层基本可以不改；横纵向控制、命令仲裁与安全边界都应尽量保持稳定。</td>
+          </tr>
+          <tr>
+            <td class="trim-col-layer">车辆接口</td>
+            <td class="trim-col-pkg">vehicle-specific driver，CAN interface</td>
+            <td><span class="decision-pill decision-keep">保留</span></td>
+            <td>与地图和规划语义几乎无关，按 AiLabCar 平台适配一次即可长期复用。</td>
+          </tr>
+          <tr>
+            <td class="trim-col-layer">系统安全 System</td>
+            <td class="trim-col-pkg">diagnostic_graph_aggregator，MRM handler，minimal system monitor</td>
+            <td><span class="decision-pill decision-mix">保留（精简）</span></td>
+            <td>建议保留最小诊断与最小风险机动功能。轻量化不等于删除安全边界。</td>
+          </tr>
+          <tr>
+            <td class="trim-col-layer">仿真 Simulator</td>
+            <td class="trim-col-pkg">planning_simulator，dummy_perception_publisher，simulator tools</td>
+            <td><span class="decision-pill decision-remove">移除</span></td>
+            <td>实车 Runtime 不需要。开发与验证阶段保留在 PC / 仿真工作区即可，不进入控制器部署包。</td>
+          </tr>
+          <tr>
+            <td class="trim-col-layer">评估 Evaluator</td>
+            <td class="trim-col-pkg">planning / control / perception_evaluator</td>
+            <td><span class="decision-pill decision-remove">移除</span></td>
+            <td>它们属于验证与分析工具，不是运行闭环依赖。</td>
+          </tr>
+          <tr>
+            <td class="trim-col-layer">外部接口</td>
+            <td class="trim-col-pkg">autoware_adapi*，web_hmi，external API bridges</td>
+            <td><span class="decision-pill decision-remove">按需移除</span></td>
+            <td>若当前没有产品化 HMI 或外部业务接口需求，可以不进入 Lite Runtime；调试时只保留必要可视化接口。</td>
+          </tr>
+          <tr>
+            <td class="trim-col-layer">V2X / Radar</td>
+            <td class="trim-col-pkg">对应专用感知包与融合包</td>
+            <td><span class="decision-pill decision-remove">移除</span></td>
+            <td>若 AiLabCar 当前没有相关硬件，直接裁掉整条链路，避免占用编译、磁盘与运行资源。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="trim-note">该表可直接作为 Autoware tag 1.71.2 → Autoware AiLabCar Lite 工作空间裁剪对照表。<br><span style="color:#a76a0a">注意：本表沿用早期未加前缀的包名（如 <code>ndt_scan_matcher</code>、<code>behavior_path_planner</code>、<code>motion_velocity_smoother</code>），与上方“Autoware 包结构与 AiLabCar Lite 映射”表中 <code>autoware_*</code> 前缀命名可能不是同一版本的确切包名（部分模块在近期 Autoware 版本中已合并/更名，例如 <code>motion_velocity_smoother</code> 与 <code>motion_velocity_planner</code>）。落地前务必以本地 tag 1.71.2 的 <code>colcon list</code> / <code>ros2 pkg list</code> 结果为准，统一成同一套包名再写入白名单。</span></div>
+  </section>
+
+
+  
+  <section id="state-machine">
+    <h2>Mapping → Autonomous 运行状态机</h2>
+    <div class="section-sub">
+      AiLabCar 与标准“已有 HD Map 后启动”的 Autoware 不同，因此必须明确首圈建图、地图冻结、验证、规划控制接管的状态转换。
+    </div>
+    <div class="eng-box">
+      <div class="state-flow">
+        <span class="state-box">BOOT</span><span class="state-arrow">→</span>
+        <span class="state-box">SENSOR_READY</span><span class="state-arrow">→</span>
+        <span class="state-box warn">MAPPING</span><span class="state-arrow">→</span>
+        <span class="state-box warn">MAP_FREEZE</span><span class="state-arrow">→</span>
+        <span class="state-box">MAP_VERIFY</span><span class="state-arrow">→</span>
+        <span class="state-box">ROUTE_GENERATE</span><span class="state-arrow">→</span>
+        <span class="state-box keep">AUTONOMOUS</span><span class="state-arrow">→</span>
+        <span class="state-box stop">SAFE_STOP / MRM</span>
+      </div>
+      <div class="eng-grid3" style="margin-top:14px">
+        <div class="eng-box"><div class="eng-title">MAPPING 完成条件</div><div class="eng-text">地图覆盖率、左右边界有效率、闭环/终点条件、地图几何合法性达到阈值。</div></div>
+        <div class="eng-box"><div class="eng-title">MAP_FREEZE</div><div class="eng-text">冻结地图版本并停止结构性修改，生成唯一版本号与校验信息，避免规划过程中地图拓扑持续变化。</div></div>
+        <div class="eng-box"><div class="eng-title">切换失败</div><div class="eng-text">Route 生成失败、TF 不一致、地图校验失败或定位不可用时，不允许进入 Autonomous，保持安全停车。</div></div>
+      </div>
+    </div>
+  </section>
+
+
+  <section id="runtime">
+    <h2>Runtime 部署架构</h2>
+    <div class="section-sub">
+      开发工作区与比赛运行环境分离。实车控制器不承担源码管理、编译缓存和训练资产存储。
+    </div>
+    <div class="eng-grid2">
+      <div class="eng-box">
+        <div class="eng-title">控制器目标目录</div>
+        <pre class="deploy-tree">Autoware_AiLabCar_Lite/
+├── install/                              # 只读：Release 安装产物
+│   ├── setup.bash
+│   ├── local_setup.bash
+│   ├── ailabcar_runtime/
+│   ├── ailabcar_launch/
+│   ├── autoware_msgs*/
+│   ├── autoware_utils*/
+│   ├── autoware_universe*/
+│   └── ...                              # 仅依赖闭包内 Package
+│
+├── config/                               # 可版本化：运行参数
+│   ├── common/
+│   │   ├── frames.yaml                  # frame_id 统一定义
+│   │   ├── qos.yaml                     # 关键 Topic QoS
+│   │   ├── topic_remap.yaml             # Topic 重映射
+│   │   └── vehicle_info.yaml            # 车辆基础尺寸/参数
+│   │
+│   ├── sensing/
+│   │   ├── lidar/
+│   │   │   ├── rsemx_driver.yaml
+│   │   │   └── pointcloud_preprocessor.yaml
+│   │   ├── camera/
+│   │   │   ├── hikrobot_driver.yaml
+│   │   │   └── image_pipeline.yaml
+│   │   ├── gnss_imu/
+│   │   │   ├── gnss.yaml
+│   │   │   ├── imu.yaml
+│   │   │   └── time_sync.yaml
+│   │   └── sensor_timeout.yaml
+│   │
+│   ├── perception/
+│   │   ├── yolo.yaml
+│   │   ├── lidar_cluster.yaml
+│   │   ├── fusion.yaml
+│   │   ├── tracker.yaml
+│   │   └── boundary_detection.yaml
+│   │
+│   ├── localization/
+│   │   ├── gnss_imu_fusion.yaml
+│   │   ├── ekf.yaml
+│   │   ├── map_origin.yaml
+│   │   └── localization_monitor.yaml
+│   │
+│   ├── mapping/
+│   │   ├── realtime_mapper.yaml
+│   │   ├── lanelet_generator.yaml
+│   │   ├── map_validation.yaml
+│   │   └── map_freeze.yaml
+│   │
+│   ├── planning/
+│   │   ├── route.yaml
+│   │   ├── behavior_path.yaml
+│   │   ├── behavior_velocity.yaml
+│   │   ├── motion_planner.yaml
+│   │   ├── velocity_smoother.yaml
+│   │   └── trajectory_validator.yaml
+│   │
+│   ├── control/
+│   │   ├── lateral_controller.yaml
+│   │   ├── longitudinal_controller.yaml
+│   │   ├── control_limits.yaml
+│   │   ├── control_validator.yaml
+│   │   └── vehicle_cmd_gate.yaml
+│   │
+│   ├── vehicle/
+│   │   ├── can_interface.yaml
+│   │   ├── vehicle_command.yaml
+│   │   ├── steering.yaml
+│   │   ├── throttle_brake.yaml
+│   │   └── dbc/
+│   │       └── ailabcar.dbc
+│   │
+│   ├── system/
+│   │   ├── diagnostics.yaml
+│   │   ├── operation_mode.yaml
+│   │   ├── fault_policy.yaml
+│   │   ├── mrm.yaml
+│   │   └── timeout_policy.yaml
+│   │
+│   └── profiles/                         # 不同运行模式的参数组合
+│       ├── mapping.yaml
+│       ├── autonomous.yaml
+│       ├── debug.yaml
+│       └── competition.yaml
+│
+├── calibration/                          # 标定结果，与普通 config 分离
+│   ├── sensors/
+│   │   ├── camera_intrinsics.yaml
+│   │   ├── camera_extrinsics.yaml
+│   │   ├── lidar_extrinsics.yaml
+│   │   ├── imu_extrinsics.yaml
+│   │   └── gnss_extrinsics.yaml
+│   │
+│   ├── vehicle/
+│   │   ├── kinematic_parameters.yaml
+│   │   ├── steering_ratio.yaml
+│   │   ├── steer_offset.yaml
+│   │   ├── accel_map.csv
+│   │   └── brake_map.csv
+│   │
+│   └── calibration_manifest.yaml         # 标定版本/时间/车辆编号
+│
+├── models/                               # 只保留推理必需资产
+│   ├── yolo/
+│   │   ├── yolo_fp16.engine
+│   │   ├── labels.txt
+│   │   ├── preprocess.yaml
+│   │   └── model_meta.json
+│   └── model_manifest.json               # SHA256 / TensorRT / CUDA 信息
+│
+├── maps/                                 # 地图生命周期管理
+│   ├── staging/                          # Mapping 阶段临时输出
+│   │   ├── lanelet2_map.osm
+│   │   ├── map_projector_info.yaml
+│   │   └── map_metadata.json
+│   │
+│   ├── current -> history/map_xxx/       # 当前使用地图，原子切换
+│   │
+│   ├── history/
+│   │   ├── map_YYYYMMDD_HHMMSS/
+│   │   │   ├── lanelet2_map.osm
+│   │   │   ├── map_projector_info.yaml
+│   │   │   ├── map_metadata.json
+│   │   │   └── checksum.sha256
+│   │   └── ...
+│   │
+│   └── validation/
+│       ├── latest_report.json
+│       └── map_quality.csv
+│
+├── scripts/                              # 现场只调用脚本，不拼复杂命令
+│   ├── env.sh                            # ROS_DOMAIN_ID / RMW / 路径等
+│   ├── start_sensors.sh
+│   ├── start_mapping.sh
+│   ├── freeze_map.sh
+│   ├── validate_map.sh
+│   ├── start_autonomous.sh
+│   ├── stop_all.sh
+│   ├── health_check.sh
+│   ├── collect_diagnostics.sh
+│   ├── backup_map.sh
+│   └── rollback.sh
+│
+├── runtime/                              # 运行状态与版本信息
+│   ├── manifests/
+│   │   ├── version_manifest.yaml
+│   │   ├── package_whitelist.txt
+│   │   ├── build_info.json
+│   │   └── checksums.sha256
+│   ├── state/
+│   │   ├── current_mode
+│   │   ├── current_map
+│   │   └── last_health.json
+│   └── lock/
+│       └── ailabcar.lock
+│
+└── var/                                  # 运行期可写数据，必须限额
+    ├── log/
+    │   ├── ros/
+    │   ├── system/
+    │   └── logrotate.conf
+    ├── diagnostics/
+    │   └── latest/
+    ├── rosbag/                           # 默认关闭或写外置盘
+    └── tmp/</pre>
+
+        <div class="eng-title" style="margin-top:16px">目录职责与管理规则</div>
+        <div class="contract-table-wrap">
+          <table class="contract-table">
+            <thead>
+              <tr><th>目录</th><th>属性</th><th>更新来源</th><th>关键规则</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="eng-code">install/</td><td>只读</td><td>CI / Release Build</td><td>禁止现场手工修改；升级必须整体替换并可回滚。</td></tr>
+              <tr><td class="eng-code">config/</td><td>可版本化</td><td>工程参数</td><td>所有参数变更必须进入 Git/版本清单，不允许散落在 launch 中。</td></tr>
+              <tr><td class="eng-code">calibration/</td><td>高敏感配置</td><td>标定流程</td><td>与普通参数分离；必须记录时间、车辆、传感器和版本。</td></tr>
+              <tr><td class="eng-code">models/</td><td>只读资产</td><td>模型发布流程</td><td>Engine、标签、预处理和 TensorRT/CUDA 版本必须绑定。</td></tr>
+              <tr><td class="eng-code">maps/</td><td>受控可写</td><td>Mapping 流程</td><td>先写 staging，通过验证后进入 history，再原子切换 current。</td></tr>
+              <tr><td class="eng-code">scripts/</td><td>可执行</td><td>工程维护</td><td>现场只调用脚本；脚本内部统一 source env.sh，禁止硬编码环境。</td></tr>
+              <tr><td class="eng-code">runtime/</td><td>状态/清单</td><td>系统自动生成</td><td>保存当前模式、版本、包白名单和校验值，用于故障定位与回滚。</td></tr>
+              <tr><td class="eng-code">var/</td><td>运行期可写</td><td>ROS / System</td><td>日志与 rosbag 必须限额和轮转，防止控制器磁盘被写满。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="eng-box">
+        <div class="eng-title">不进入 Runtime</div>
+        <div class="safety-chain">
+          <div class="safety-node"><b>src/</b>源码仅保留开发机 / Git。</div>
+          <div class="safety-node"><b>build/</b>编译中间产物不部署。</div>
+          <div class="safety-node"><b>log/</b>构建日志不随镜像部署。</div>
+          <div class="safety-node"><b>Training Assets</b>数据集、训练 checkpoint、ONNX 中间件不进入控制器。</div>
+        </div>
+        <div class="eng-note">
+          <b>注意：</b>这里删除的是 Colcon 的 <code>build/</code> 和开发期 <code>log/</code>，不是禁止系统产生运行日志。
+          实车运行日志统一进入 <code>var/log/</code>，并通过容量限制与轮转策略控制磁盘占用。
+          <br><br>
+          最终运行构建建议：Release、<code>BUILD_TESTING=OFF</code>、install-only；部署物必须可版本化、可校验、可一键回滚。
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <section id="safety">
+    <h2>最小安全与故障处理链</h2>
+    <div class="section-sub">
+      轻量化不能把安全边界一起删除。至少保留传感器、定位、地图、规划、控制与 CAN 的时效性和健康状态监测。
+    </div>
+    <div class="safety-chain">
+      <div class="safety-node"><b>Sensor Health</b>LiDAR / Camera / GNSS / IMU timeout、频率异常</div>
+      <div class="safety-node"><b>Localization Health</b>状态过期、跳变、TF 缺失</div>
+      <div class="safety-node"><b>Map / Planning Health</b>map_invalid、route fail、trajectory timeout / invalid</div>
+      <div class="safety-node"><b>Control Health</b>controller timeout、command out-of-bound</div>
+      <div class="safety-node"><b>Vehicle Health</b>CAN timeout、VCU fault、控制模式异常</div>
+      <div class="safety-node"><b>Fault Manager</b>WARN → HOLD → SAFE STOP / MRM</div>
+    </div>
+    <div class="eng-note"><b>关键要求：</b>Planning 停止更新后，控制器不能无限复用最后一帧 trajectory/control command；必须设置 stale timeout 并通过 Command Gate 转入安全状态。</div>
+  </section>
+
+
+  <section id="resources">
+    <h2>资源预算与 Full / Lite 对比</h2>
+    <div class="section-sub">
+      “轻量化”必须可量化。建议在 Full Autoware 与 AiLabCar Lite 上使用同一控制器、同一数据输入和同一测试路线采集以下指标。
+    </div>
+    <div class="resource-table-wrap">
+      <table class="resource-table">
+        <thead><tr><th>指标</th><th>Full Autoware</th><th>AiLabCar Lite</th><th>目标 / 判据</th><th>采集方式</th></tr></thead>
+        <tbody>
+          <tr><td>Package 数量</td><td>待测</td><td>待测</td><td>显著下降</td><td class="eng-code">colcon list | wc -l</td></tr>
+          <tr><td>运行 Nodes</td><td>待测</td><td>待测</td><td>只保留白名单</td><td class="eng-code">ros2 node list</td></tr>
+          <tr><td>Topics 数量</td><td>待测</td><td>待测</td><td>无无关城市功能 Topic</td><td class="eng-code">ros2 topic list</td></tr>
+          <tr><td>src 占用</td><td>待测</td><td>开发机保留</td><td>不进入 Runtime</td><td class="eng-code">du -sh src</td></tr>
+          <tr><td>install 占用</td><td>待测</td><td>待测</td><td>明显降低</td><td class="eng-code">du -sh install</td></tr>
+          <tr><td>RAM</td><td>待测</td><td>待测</td><td>下降且无 swap 压力</td><td class="eng-code">ps / free / top</td></tr>
+          <tr><td>CPU</td><td>待测</td><td>待测</td><td>平均与 p95 均下降</td><td>进程级 CPU 统计</td></tr>
+          <tr><td>GPU</td><td>待测</td><td>待测</td><td>YOLO/LiDAR 实际负载可控</td><td>tegrastats / GPU telemetry</td></tr>
+          <tr><td>启动时间</td><td>待测</td><td>待测</td><td>缩短</td><td>launch start → ready</td></tr>
+          <tr><td>Control latency</td><td>待测</td><td>待测</td><td>不能因裁剪恶化</td><td>callback / end-to-end p95</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+
+  <section id="task-board">
+    <h2>AiLabCar Lite 工程任务看板</h2>
+    <div class="section-sub">
+      采用类似 Gitee 的三列任务板：待办 / 进行中 / 已完成。每张卡都包含“要做什么、产出物、验收条件”。可拖拽任务卡改变状态；勾选复选框会直接标记完成并移动到“已完成”。状态保存在当前浏览器本地。
+    </div>
+
+    <div class="kanban-toolbar">
+      <div class="kanban-summary">
+        <span class="kstat">总任务 <b id="kTotal">0</b></span>
+        <span class="kstat">待办 <b id="kTodo">0</b></span>
+        <span class="kstat">进行中 <b id="kDoing">0</b></span>
+        <span class="kstat">已完成 <b id="kDone">0</b></span>
+        <span class="kstat">完成率 <b id="kPct">0%</b></span>
+      </div>
+      <div class="kanban-actions">
+        <button class="kbtn" id="kReset">重置任务状态</button>
+      </div>
+    </div>
+    <div class="kprogress"><div id="kProgress"></div></div>
+
+    <div class="kanban-board" style="margin-top:14px">
+      <div class="kcol" data-status="todo">
+        <div class="kcol-head"><span class="kcol-title">待办</span><span class="kcount" data-count="todo">0</span></div>
+        <div class="kcards" data-cards="todo"></div>
+      </div>
+      <div class="kcol" data-status="doing">
+        <div class="kcol-head"><span class="kcol-title">进行中</span><span class="kcount" data-count="doing">0</span></div>
+        <div class="kcards" data-cards="doing"></div>
+      </div>
+      <div class="kcol" data-status="done">
+        <div class="kcol-head"><span class="kcol-title">已完成</span><span class="kcount" data-count="done">0</span></div>
+        <div class="kcards" data-cards="done"></div>
+      </div>
+    </div>
+    <div class="kfooter">
+      阶段定义：P0 基线与边界 → P1 Launch 裁剪 → P2 定位/建图与模式切换 → P3 Package 裁剪 → P4 安全与 Runtime → P5 回归与最终验收。建议一次只保持少量任务处于“进行中”。
+    </div>
+  </section>
+
+
+  <section id="metrics">
+    <h2>验收指标</h2>
+    <div class="section-sub">轻量化不是“删得越多越好”，最终要以功能完整性和运行稳定性验收。</div>
+    <div class="metrics">
+      <div class="metric"><b>100%</b><span>核心链路可用：感知 → Mapping → Planning → Control → CAN</span></div>
+      <div class="metric"><b>0</b><span>不使用功能的 Runtime 启动节点：Traffic Light / Radar / Parking 等</span></div>
+      <div class="metric"><b>Release</b><span>BUILD_TESTING=OFF，最终 Runtime 不带开发构建产物</span></div>
+      <div class="metric"><b>≤ 1</b><span>一个顶层 ailabcar_autonomous 启动入口</span></div>
+      <div class="metric"><b>2 Modes</b><span>Mapping / Autonomous 两种运行模式清晰分离</span></div>
+      <div class="metric"><b>可回滚</b><span>Full Reference Workspace 永久保留，可与 Lite 对照</span></div>
+      <div class="metric"><b>可追溯</b><span>每个保留 package 都能映射到功能需求或依赖闭包</span></div>
+      <div class="metric"><b>稳定</b><span>功能回归、TF、Topic、控制命令链全部通过</span></div>
+    </div>
+  </section>
+
+  <section id="risk">
+    <h2>风险与对策</h2>
+    <table class="table">
+      <thead><tr><th>风险</th><th>对策</th></tr></thead>
+      <tbody>
+        <tr><td>直接删除包导致隐式依赖断裂</td><td>先 Launch 白名单，再用 colcon 依赖闭包；禁止在 Full Workspace 直接大规模 rm。</td></tr>
+        <tr><td>删除 Localization 后 Planning/Control 失去 ego state</td><td>保留最小状态估计与 TF，只裁 NDT/PCD 等重型定位链。</td></tr>
+        <tr><td>一边实时修改 Lanelet2、一边 Planning 导致不稳定</td><td>优先采用 Mapping 与 Autonomous 两阶段运行模式。</td></tr>
+        <tr><td>裁剪后功能“能启动但行为变化”</td><td>每阶段做 topic/TF/trajectory/control 回归，对照 Full Reference。</td></tr>
+        <tr><td>Runtime 仍被训练模型、日志、开发工具占满</td><td>最终只部署 install/config/model/map，YOLO 只保留实际 engine。</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+
+
+
+<script>
+const KANBAN_TASKS = [
+  // P0 — Baseline
+  {
+    id:"P0-01",p:"P0",area:"系统基线",
+    title:"建立 Full Autoware 运行基线",
+    desc:"采集当前完整系统的 node、topic、TF、launch、CPU、RAM、GPU、磁盘与启动时间。",
+    deliver:"产出：full_baseline/ 目录 + baseline.md",
+    accept:"验收：同一环境可重复采集，关键指标记录完整"
+  },
+  {
+    id:"P0-02",p:"P0",area:"版本冻结",
+    title:"冻结 tag 1.71.2 参考工作区",
+    desc:"保留不可随意修改的 Full Reference Workspace，记录 commit/tag、repos 文件和环境版本。",
+    deliver:"产出：version_manifest.txt",
+    accept:"验收：任意裁剪问题可回到完整版本复现"
+  },
+  {
+    id:"P0-03",p:"P0",area:"功能边界",
+    title:"确认 KEEP / ADAPT / REMOVE 第一版清单",
+    desc:"根据比赛需求确认 Sensing、Localization、Map、Perception、Planning、Control、System 的边界。",
+    deliver:"产出：module_scope_v1.csv",
+    accept:"验收：每个功能域都有明确状态与理由"
+  },
+  {
+    id:"P0-04",p:"P0",area:"接口",
+    title:"冻结 AiLabCar 核心接口契约",
+    desc:"确认 PointCloud、Image、KinematicState、TF、Lanelet2、Trajectory、ControlCmd、CAN 的输入输出。",
+    deliver:"产出：interface_contract_v1.md",
+    accept:"验收：Topic / Message / Frame / Rate / QoS 均明确"
+  },
+  {
+    id:"P0-05",p:"P0",area:"时间与DDS",
+    title:"核对时间同步、QoS 与 DDS 行为",
+    desc:"确认 Camera/LiDAR/GNSS/IMU 时间戳来源，检查关键 Topic QoS 是否匹配。",
+    deliver:"产出：qos_time_matrix.csv",
+    accept:"验收：关键 Topic 无“存在但订阅不到”问题"
+  },
+
+  // P1 — Launch
+  {
+    id:"P1-01",p:"P1",area:"Launch",
+    title:"建立 ailabcar_sensors.launch",
+    desc:"只启动实际使用的 Camera、LiDAR、GNSS、IMU、CAN 与必要静态 TF。",
+    deliver:"产出：ailabcar_sensors.launch.xml",
+    accept:"验收：传感器数据和 TF 全部正常"
+  },
+  {
+    id:"P1-02",p:"P1",area:"Launch",
+    title:"建立 ailabcar_mapping.launch",
+    desc:"组合 Sensor + Perception + Minimal Localization + Realtime Mapper。",
+    deliver:"产出：ailabcar_mapping.launch.xml",
+    accept:"验收：可独立完成一次地图生成闭环"
+  },
+  {
+    id:"P1-03",p:"P1",area:"Launch",
+    title:"建立 ailabcar_autonomous.launch",
+    desc:"组合 Sensor + Perception + Localization + Map + Planning + Control + Vehicle。",
+    deliver:"产出：ailabcar_autonomous.launch.xml",
+    accept:"验收：可从地图加载到 CAN 控制完整运行"
+  },
+  {
+    id:"P1-04",p:"P1",area:"Launch",
+    title:"建立 ailabcar_debug.launch",
+    desc:"把 RViz、Evaluator、Rosbag、Debug Marker 与临时监视工具集中到单独入口。",
+    deliver:"产出：ailabcar_debug.launch.xml",
+    accept:"验收：比赛正常启动不包含 Debug 组件"
+  },
+  {
+    id:"P1-05",p:"P1",area:"裁剪",
+    title:"从 Launch 中移除 Radar / V2X / Traffic Light",
+    desc:"先从运行图中彻底关闭明确无需求模块，不删除源码。",
+    deliver:"产出：node_diff_after_launch_trim.txt",
+    accept:"验收：无对应节点与 Topic，核心链路不受影响"
+  },
+  {
+    id:"P1-06",p:"P1",area:"规划",
+    title:"精简城市道路 Behavior / Regulatory 模块",
+    desc:"关闭 Lane Change、Intersection、Crosswalk、Walkway、Parking、Traffic Light 等比赛无关插件。",
+    deliver:"产出：planning_preset_ailabcar.yaml",
+    accept:"验收：赛道规划结果与 Full 版本核心功能等价"
+  },
+
+  // P2 — Localization / Mapping
+  {
+    id:"P2-01",p:"P2",area:"Localization",
+    title:"完成 Minimal Localization 输出",
+    desc:"GNSS/IMU/轮速等提供连续 ego pose、velocity、yaw，并满足 Autoware 下游接口。",
+    deliver:"产出：minimal_localization 配置与 launch",
+    accept:"验收：/localization/kinematic_state 连续稳定"
+  },
+  {
+    id:"P2-02",p:"P2",area:"TF",
+    title:"验证 map → odom → base_link 唯一 TF 链",
+    desc:"清除重复发布、跳变和无效 frame；传感器 TF 全部可追溯。",
+    deliver:"产出：frames.pdf / TF 检查记录",
+    accept:"验收：tf_echo 连续、无冲突"
+  },
+  {
+    id:"P2-03",p:"P2",area:"Mapping",
+    title:"定义 Mapping 完成条件",
+    desc:"明确地图覆盖、左右边界有效率、终点/闭环、几何合法性等判据。",
+    deliver:"产出：mapping_acceptance.yaml",
+    accept:"验收：系统能够自动判断 map_valid"
+  },
+  {
+    id:"P2-04",p:"P2",area:"Mapping",
+    title:"实现 Map Freeze 与地图版本管理",
+    desc:"建图完成后冻结 Lanelet2，生成版本号、时间戳与校验信息。",
+    deliver:"产出：maps/current + metadata.json",
+    accept:"验收：规划阶段地图结构不被意外修改"
+  },
+  {
+    id:"P2-05",p:"P2",area:"状态机",
+    title:"实现 Mapping → Autonomous 状态切换",
+    desc:"BOOT → SENSOR_READY → MAPPING → MAP_FREEZE → VERIFY → ROUTE → AUTONOMOUS。",
+    deliver:"产出：状态机节点 / launch 控制逻辑",
+    accept:"验收：失败条件不会误进入 Autonomous"
+  },
+
+  // P2.5 — Source modularization
+  {
+    id:"P2-06",p:"P2",area:"源码架构",
+    title:"建立 Autoware → AiLabCar 源码迁移矩阵",
+    desc:"对实际 package 分类为 KEEP_UNMODIFIED / MODIFY_AILABCAR / REMOVE_FROM_LITE / DEV_ONLY。",
+    deliver:"产出：SOURCE_MIGRATION_MATRIX.csv",
+    accept:"验收：每个核心 package 都有唯一分类、来源、目标路径和理由"
+  },
+  {
+    id:"P2-07",p:"P2",area:"源码架构",
+    title:"定义 MODIFY_AILABCAR Package 目标路径",
+    desc:"需要修改的 Autoware package 规划迁入 src/ailabcar/<domain>/；未修改依赖规划进入 src/upstream/。",
+    deliver:"产出：AUTOWARE_TO_AILABCAR_MAPPING.md",
+    accept:"验收：任一 ROS package 在 Lite Workspace 中只有一个来源"
+  },
+  {
+    id:"P2-08",p:"P2",area:"源码架构",
+    title:"完成 Package 迁移风险检查",
+    desc:"检查 duplicate package、pluginlib、ament index、launch include、CMake install、相对路径和资源文件。",
+    deliver:"产出：PACKAGE_MIGRATION_RISK.md",
+    accept:"验收：已识别不能简单 cp/mv 的特殊 package"
+  },
+  {
+    id:"P2-09",p:"P2",area:"源码架构",
+    title:"确定第一批源码迁移 Package",
+    desc:"从依赖少、已明确修改、接口稳定的 package 中选择 1~3 个作为第一批迁移对象。",
+    deliver:"产出：FIRST_MIGRATION_BATCH.md",
+    accept:"验收：每个候选都有来源、目标路径、依赖、验证与回滚方案"
+  },
+
+  // P3 — Package trimming
+  {
+    id:"P3-01",p:"P3",area:"Package",
+    title:"建立 ailabcar_runtime meta-package",
+    desc:"用一个顶层 package 描述比赛 Runtime 的直接依赖。",
+    deliver:"产出：ailabcar_runtime/package.xml",
+    accept:"验收：它能成为依赖闭包唯一入口"
+  },
+  {
+    id:"P3-02",p:"P3",area:"Package",
+    title:"生成 tag 1.71.2 Package 白名单",
+    desc:"执行 colcon --packages-up-to ailabcar_runtime，保存真实依赖闭包。",
+    deliver:"产出：ailabcar_packages.txt",
+    accept:"验收：白名单可重复生成且纳入版本管理"
+  },
+  {
+    id:"P3-03",p:"P3",area:"依赖图",
+    title:"生成 Package Dependency Graph",
+    desc:"使用 colcon graph + Graphviz 生成依赖 SVG，并嵌入设计页面。",
+    deliver:"产出：ailabcar_dependency.svg",
+    accept:"验收：可追踪每个保留包为何存在"
+  },
+  {
+    id:"P3-04",p:"P3",area:"Runtime依赖",
+    title:"检查动态加载与隐式 Runtime 依赖",
+    desc:"检查 pluginlib、launch、YAML、ament index、Python import、shared library。",
+    deliver:"产出：runtime_dependency_checklist.csv",
+    accept:"验收：最小环境启动无缺包/插件错误"
+  },
+  {
+    id:"P3-05",p:"P3",area:"Workspace",
+    title:"建立独立 Lite Workspace",
+    desc:"禁止直接破坏 Full Workspace；仅在新的 Lite Workspace 中按白名单取源码。",
+    deliver:"产出：autoware_ailabcar_lite workspace",
+    accept:"验收：可独立 colcon build"
+  },
+  {
+    id:"P3-06",p:"P3",area:"构建",
+    title:"完成第一次最小 Package 构建",
+    desc:"只构建 ailabcar_runtime 依赖闭包，解决意外传入的 Radar/TrafficLight/Simulator 等依赖。",
+    deliver:"产出：build_report_v1.md",
+    accept:"验收：Release build 成功且无需 Full Workspace 兜底"
+  },
+
+  // P4 — Safety and runtime
+  {
+    id:"P4-01",p:"P4",area:"安全",
+    title:"实现 Sensor / Localization / Planning 健康监测",
+    desc:"至少监控 timeout、stale、TF invalid、map invalid、trajectory invalid。",
+    deliver:"产出：health_monitor 配置",
+    accept:"验收：故障注入能够正确触发状态"
+  },
+  {
+    id:"P4-02",p:"P4",area:"安全",
+    title:"实现 Trajectory / Control stale timeout",
+    desc:"Planning 停止更新后不得无限复用最后一帧控制结果。",
+    deliver:"产出：timeout 参数与测试记录",
+    accept:"验收：超时自动进入 HOLD / SAFE STOP"
+  },
+  {
+    id:"P4-03",p:"P4",area:"MRM",
+    title:"建立最小 Fault Manager / MRM 链",
+    desc:"将关键故障分成 WARN、HOLD、SAFE STOP / Emergency。",
+    deliver:"产出：fault_policy.yaml",
+    accept:"验收：关键故障都有确定响应"
+  },
+  {
+    id:"P4-04",p:"P4",area:"Runtime",
+    title:"生成 Release install-only Runtime",
+    desc:"BUILD_TESTING=OFF，最终控制器只部署 install/config/calibration/models/maps/scripts。",
+    deliver:"产出：runtime_release_v1/",
+    accept:"验收：不依赖 src/build/log 即可启动"
+  },
+  {
+    id:"P4-05",p:"P4",area:"模型",
+    title:"精简 YOLO Runtime 模型资产",
+    desc:"控制器仅保留实际部署 TensorRT Engine 和必要标签/配置。",
+    deliver:"产出：models/yolo_fp16.engine",
+    accept:"验收：无训练 checkpoint、dataset、无用 ONNX"
+  },
+  {
+    id:"P4-06",p:"P4",area:"运维",
+    title:"建立启动、健康检查与回滚脚本",
+    desc:"提供 mapping、autonomous、health_check、rollback 一键脚本。",
+    deliver:"产出：scripts/*.sh",
+    accept:"验收：现场无需手工拼接复杂命令"
+  },
+
+  // P5 — Validation
+  {
+    id:"P5-01",p:"P5",area:"功能回归",
+    title:"Full vs Lite 核心功能对比",
+    desc:"同一数据输入下比较感知输出、地图、轨迹、控制命令与状态机。",
+    deliver:"产出：functional_regression_report.md",
+    accept:"验收：核心闭环功能无退化"
+  },
+  {
+    id:"P5-02",p:"P5",area:"资源",
+    title:"完成 Full / Lite 资源对比",
+    desc:"对比 package、node、topic、install、CPU、RAM、GPU、启动时间。",
+    deliver:"产出：resource_comparison.csv",
+    accept:"验收：Lite 有明确量化收益"
+  },
+  {
+    id:"P5-03",p:"P5",area:"性能",
+    title:"验证端到端与控制 p95 延迟",
+    desc:"确保裁剪不会引入 Topic 排队、QoS 或 callback 性能退化。",
+    deliver:"产出：latency_report.csv",
+    accept:"验收：关键实时指标不劣于 Full 基线"
+  },
+  {
+    id:"P5-04",p:"P5",area:"故障测试",
+    title:"执行关键故障注入测试",
+    desc:"覆盖 LiDAR/Camera timeout、Localization stale、Map invalid、Planning timeout、CAN timeout。",
+    deliver:"产出：fault_injection_report.md",
+    accept:"验收：所有故障均进入预期安全状态"
+  },
+  {
+    id:"P5-05",p:"P5",area:"比赛验收",
+    title:"G3：AiLabCar Lite 最终 Runtime 验收",
+    desc:"冻结比赛版本，确认功能、资源、性能、安全、部署和回滚全部满足要求。",
+    deliver:"产出：release_manifest + acceptance_report",
+    accept:"验收：可作为比赛控制器正式版本"
+  }
+];
+
+const KB_KEY="ailabcar_lite_kanban_v7";
+let kbState={};
+try{kbState=JSON.parse(localStorage.getItem(KB_KEY)||"{}")}catch(e){kbState={}}
+
+function getStatus(id){return kbState[id]||"todo"}
+function setStatus(id,status){kbState[id]=status;localStorage.setItem(KB_KEY,JSON.stringify(kbState));renderKanban()}
+
+function taskCard(t){
+  const status=getStatus(t.id);
+  const el=document.createElement("div");
+  el.className="ktask"+(status==="done"?" done":"");
+  el.draggable=true;
+  el.dataset.id=t.id;
+  el.innerHTML=`
+    <div class="ktask-top">
+      <input class="ktask-check" type="checkbox" ${status==="done"?"checked":""} aria-label="完成任务">
+      <div class="ktask-main">
+        <div class="ktask-title">${t.id} · ${t.title}</div>
+        <div class="ktask-desc">${t.desc}</div>
+        <div class="ktask-desc" style="margin-top:7px"><b style="color:#5d4f88">产出物：</b>${t.deliver.replace(/^产出：/,"")}</div>
+        <div class="ktask-desc" style="margin-top:3px"><b style="color:#3f7753">验收：</b>${t.accept.replace(/^验收：/,"")}</div>
+        <div class="ktask-meta">
+          <span class="kbadge ${t.p.toLowerCase()}">${t.p}</span>
+          <span class="kbadge karea">${t.area}</span>
+          <span class="kbadge kdeliver">有产出物</span>
+          <span class="kbadge kaccept">有验收条件</span>
+        </div>
+      </div>
+      <button class="ktask-status" title="点击推进状态">${status==="todo"?"开始":status==="doing"?"完成":"重开"}</button>
+    </div>`;
+  el.querySelector(".ktask-check").addEventListener("change",e=>{
+    setStatus(t.id,e.target.checked?"done":"todo");
+  });
+  el.querySelector(".ktask-status").addEventListener("click",()=>{
+    const s=getStatus(t.id);
+    setStatus(t.id,s==="todo"?"doing":s==="doing"?"done":"todo");
+  });
+  el.addEventListener("dragstart",e=>{
+    e.dataTransfer.setData("text/plain",t.id);
+    e.dataTransfer.effectAllowed="move";
+  });
+  return el;
+}
+
+function renderKanban(){
+  ["todo","doing","done"].forEach(s=>document.querySelector(`[data-cards="${s}"]`).innerHTML="");
+  const counts={todo:0,doing:0,done:0};
+  KANBAN_TASKS.forEach(t=>{
+    const s=getStatus(t.id);counts[s]++;
+    document.querySelector(`[data-cards="${s}"]`).appendChild(taskCard(t));
+  });
+  ["todo","doing","done"].forEach(s=>document.querySelector(`[data-count="${s}"]`).textContent=counts[s]);
+  document.getElementById("kTotal").textContent=KANBAN_TASKS.length;
+  document.getElementById("kTodo").textContent=counts.todo;
+  document.getElementById("kDoing").textContent=counts.doing;
+  document.getElementById("kDone").textContent=counts.done;
+  const pct=Math.round(counts.done/KANBAN_TASKS.length*100);
+  document.getElementById("kPct").textContent=pct+"%";
+  document.getElementById("kProgress").style.width=pct+"%";
+}
+document.querySelectorAll(".kcol").forEach(col=>{
+  col.addEventListener("dragover",e=>{e.preventDefault();col.classList.add("dragover")});
+  col.addEventListener("dragleave",()=>col.classList.remove("dragover"));
+  col.addEventListener("drop",e=>{
+    e.preventDefault();col.classList.remove("dragover");
+    const id=e.dataTransfer.getData("text/plain");
+    if(id)setStatus(id,col.dataset.status);
+  });
+});
+document.getElementById("kReset").addEventListener("click",()=>{
+  if(confirm("确定重置全部任务状态吗？")){kbState={};localStorage.removeItem(KB_KEY);renderKanban()}
+});
+renderKanban();
+</script>
+
+
+<script>
+function syncHeroFromKanban(){
+  const done=KANBAN_TASKS.filter(t=>getStatus(t.id)==="done").length;
+  const total=KANBAN_TASKS.length;
+  const c=document.getElementById("allCount");
+  const p=document.getElementById("allProgress");
+  if(c)c.textContent=`${done}/${total}`;
+  if(p)p.style.width=(done/total*100)+"%";
+}
+const oldRenderKanban=renderKanban;
+renderKanban=function(){oldRenderKanban();syncHeroFromKanban();}
+renderKanban();
+</script>
+
+</body>
+</html>
